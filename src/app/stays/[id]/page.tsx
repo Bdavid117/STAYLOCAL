@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { staysDeps } from "@/modules/stays/composition";
+import { reviewsDeps } from "@/modules/reviews/composition";
+import { listReviewsForStay } from "@/modules/reviews/services/list-reviews";
 import { prisma } from "@/shared/db";
 import { auth } from "@/shared/auth";
 import { Container, SectionLabel } from "@/components/ui/Container";
@@ -26,6 +28,7 @@ export default async function StayDetailPage({ params }: Props) {
     _avg: { rating: true },
     _count: { _all: true },
   });
+  const reviews = await listReviewsForStay(id, reviewsDeps());
 
   const memberSince = host
     ? new Intl.DateTimeFormat("es-CO", { year: "numeric" }).format(host.createdAt)
@@ -88,9 +91,60 @@ export default async function StayDetailPage({ params }: Props) {
             <Spec label="Estado" value="Activo" />
           </div>
 
+          {reviews.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-end justify-between">
+                <SectionLabel serial="§02">Reseñas</SectionLabel>
+                {avg._count._all > 0 && (
+                  <p className="text-sm">
+                    <span className="num font-medium">{Number(avg._avg.rating).toFixed(1)}</span>
+                    <span className="text-ink-mute"> / 5 · {avg._count._all} reseñas</span>
+                  </p>
+                )}
+              </div>
+              <ul className="space-y-4">
+                {reviews.map((r) => (
+                  <li
+                    key={r.id}
+                    className="rounded-xl border border-line bg-paper p-5"
+                  >
+                    <header className="mb-2 flex items-center gap-3">
+                      {r.author.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={r.author.photoUrl}
+                          alt={r.author.name}
+                          className="h-9 w-9 rounded-full border border-line object-cover"
+                        />
+                      ) : (
+                        <div className="grid h-9 w-9 place-items-center rounded-full bg-bone-2 font-display text-sm text-ink-soft">
+                          {r.author.name[0]?.toUpperCase() ?? "?"}
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium text-ink">{r.author.name}</p>
+                        <p className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
+                          {new Intl.DateTimeFormat("es-CO", {
+                            month: "long",
+                            year: "numeric",
+                          }).format(r.createdAt)}
+                        </p>
+                      </div>
+                      <p className="font-display text-lg">
+                        <span className="num">{r.rating}</span>
+                        <span className="ml-0.5 text-xs text-ink-mute">/ 5</span>
+                      </p>
+                    </header>
+                    <p className="text-ink-soft">{r.comment}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {host && (
             <div className="space-y-4">
-              <SectionLabel serial="§02">Quien recibe</SectionLabel>
+              <SectionLabel serial={reviews.length > 0 ? "§03" : "§02"}>Quien recibe</SectionLabel>
               <Link
                 href={`/hosts/${host.id}`}
                 className="flex items-center gap-4 rounded-xl border border-line bg-paper p-4 transition-colors hover:border-ink/30"

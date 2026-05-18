@@ -51,12 +51,23 @@ type PaymentRow = {
   paidAt: Date | null;
 };
 
+type ReviewRow = {
+  id: string;
+  bookingId: string;
+  stayId: string;
+  userId: string;
+  rating: number;
+  comment: string;
+  createdAt: Date;
+};
+
 type Snapshot = {
   stays: StayRow[];
   bookings: BookingRow[];
   availability: AvailabilityRow[];
   users: UserRow[];
   payments: PaymentRow[];
+  reviews: ReviewRow[];
 };
 
 function cloneSnapshot(s: Snapshot): Snapshot {
@@ -66,6 +77,7 @@ function cloneSnapshot(s: Snapshot): Snapshot {
     availability: s.availability.map((r) => ({ ...r })),
     users: s.users.map((r) => ({ ...r })),
     payments: s.payments.map((r) => ({ ...r })),
+    reviews: s.reviews.map((r) => ({ ...r })),
   };
 }
 
@@ -161,6 +173,29 @@ class TxClient {
       return { count: before - this.data.availability.length };
     },
   };
+
+  review = {
+    create: async ({
+      data,
+    }: {
+      data: Omit<ReviewRow, "id" | "createdAt">;
+    }) => {
+      const exists = this.data.reviews.some((r) => r.bookingId === data.bookingId);
+      if (exists) {
+        throw new Prisma.PrismaClientKnownRequestError(
+          "Unique constraint failed on the fields: (`bookingId`)",
+          { code: "P2002", clientVersion: "fake", meta: { target: ["bookingId"] } }
+        );
+      }
+      const row: ReviewRow = {
+        id: randomUUID(),
+        createdAt: new Date(),
+        ...data,
+      };
+      this.data.reviews.push(row);
+      return { ...row };
+    },
+  };
 }
 
 export class FakePrismaClient {
@@ -171,6 +206,7 @@ export class FakePrismaClient {
       availability: [],
       users: [],
       payments: [],
+      reviews: [],
     }
   ) {}
 
@@ -186,9 +222,11 @@ export class FakePrismaClient {
     findFirst: async ({
       where,
       include,
+      select: _select,
     }: {
       where: { id: string; guestId?: string };
       include?: { stay?: unknown; guest?: unknown };
+      select?: Record<string, boolean>;
     }) => {
       const b = this.data.bookings.find(
         (b) => b.id === where.id && (where.guestId === undefined || b.guestId === where.guestId)
@@ -299,6 +337,34 @@ export class FakePrismaClient {
     },
   };
 
+  review = {
+    findUnique: async ({ where }: { where: { bookingId: string } }) =>
+      this.data.reviews.find((r) => r.bookingId === where.bookingId) ?? null,
+    findMany: async ({
+      where,
+      orderBy: _orderBy,
+      take,
+      include: _include,
+    }: {
+      where: { stayId: string };
+      orderBy?: unknown;
+      take?: number;
+      include?: unknown;
+    }) => {
+      const list = this.data.reviews
+        .filter((r) => r.stayId === where.stayId)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      const sliced = take ? list.slice(0, take) : list;
+      return sliced.map((r) => ({
+        ...r,
+        user: this.data.users.find((u) => u.id === r.userId) ?? {
+          name: "Usuario",
+          photoUrl: null,
+        },
+      }));
+    },
+  };
+
   async $transaction<T>(
     fn: (tx: TxClient) => Promise<T>,
     _options?: { isolationLevel?: unknown }
@@ -342,6 +408,27 @@ export class FakePrismaClient {
 
   seedUser(u: { id: string; name: string; email: string }) {
     this.data.users.push({ id: u.id, name: u.name, email: u.email });
+  }
+
+  seedBooking(b: {
+    id: string;
+    guestId: string;
+    stayId: string;
+    checkIn: Date;
+    checkOut: Date;
+    totalAmount?: number;
+    status?: BookingRow["status"];
+  }) {
+    this.data.bookings.push({
+      id: b.id,
+      guestId: b.guestId,
+      stayId: b.stayId,
+      checkIn: b.checkIn,
+      checkOut: b.checkOut,
+      totalAmount: new Prisma.Decimal((b.totalAmount ?? 100).toString()),
+      status: b.status ?? "CONFIRMED",
+      createdAt: new Date(),
+    });
   }
 }
 

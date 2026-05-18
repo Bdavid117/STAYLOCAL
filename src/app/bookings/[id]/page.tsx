@@ -24,12 +24,12 @@ const STATUS_TONE = {
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ paid?: string }>;
+  searchParams: Promise<{ paid?: string; reviewed?: string }>;
 };
 
 export default async function BookingDetailPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const { paid } = await searchParams;
+  const { paid, reviewed } = await searchParams;
   const session = await requireSession();
 
   const booking = await prisma.booking.findFirst({
@@ -45,6 +45,7 @@ export default async function BookingDetailPage({ params, searchParams }: Props)
         },
       },
       payment: true,
+      review: { select: { id: true, rating: true } },
     },
   });
   if (!booking) notFound();
@@ -61,6 +62,13 @@ export default async function BookingDetailPage({ params, searchParams }: Props)
   const needsPayment = !isPaid && booking.status === "CONFIRMED";
   const wasRefunded = booking.payment?.status === "REFUNDED";
   const paymentFailed = booking.payment?.status === "FAILED";
+
+  const checkoutPast = booking.checkOut.getTime() <= Date.now();
+  const canReview =
+    !booking.review &&
+    checkoutPast &&
+    (booking.status === "CONFIRMED" || booking.status === "COMPLETED");
+  const hasReview = !!booking.review;
 
   const cancelAction = cancelBookingAction.bind(null, booking.id);
   const serial = booking.id.slice(-6).toUpperCase();
@@ -93,6 +101,31 @@ export default async function BookingDetailPage({ params, searchParams }: Props)
         <Banner tone="success" className="mb-6">
           Pago confirmado. El comprobante salió al correo y queda disponible en esta página.
         </Banner>
+      )}
+
+      {reviewed && hasReview && (
+        <Banner tone="success" className="mb-6">
+          Gracias por tu reseña. Ya es visible en la ficha del alojamiento.
+        </Banner>
+      )}
+
+      {canReview && (
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-terracotta/30 bg-terracotta/[0.06] p-5">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-terracotta">
+              Cuéntanos cómo te fue
+            </p>
+            <p className="mt-1 font-display text-2xl text-ink">
+              ¿Tu estadía mereció una <em className="italic text-terracotta">reseña</em>?
+            </p>
+            <p className="mt-1 text-sm text-ink-soft">
+              Tu opinión orienta a futuros huéspedes.
+            </p>
+          </div>
+          <ButtonLink href={`/bookings/${booking.id}/review`} size="lg">
+            Dejar reseña
+          </ButtonLink>
+        </div>
       )}
 
       {needsPayment && (
@@ -162,6 +195,19 @@ export default async function BookingDetailPage({ params, searchParams }: Props)
               / noche
             </p>
           </div>
+
+          {hasReview && (
+            <div className="space-y-2 rounded-2xl border border-line bg-paper p-6">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+                Tu reseña
+              </p>
+              <p className="font-display text-2xl">
+                <span className="num">{booking.review!.rating}</span>
+                <span className="ml-1 text-base text-ink-mute">/ 5</span>
+              </p>
+              <p className="text-xs text-ink-mute">Ya está visible en la ficha del alojamiento.</p>
+            </div>
+          )}
 
           {isPaid && (
             <div className="space-y-3 rounded-2xl border border-moss/30 bg-moss/[0.05] p-6">
