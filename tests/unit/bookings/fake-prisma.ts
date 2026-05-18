@@ -61,6 +61,15 @@ type ReviewRow = {
   createdAt: Date;
 };
 
+type NotificationRow = {
+  id: string;
+  userId: string;
+  type: "BOOKING_CREATED" | "BOOKING_CANCELLED" | "PAYMENT_RECEIVED" | "REVIEW_RECEIVED" | "REMINDER";
+  payload: Record<string, unknown>;
+  readAt: Date | null;
+  createdAt: Date;
+};
+
 type Snapshot = {
   stays: StayRow[];
   bookings: BookingRow[];
@@ -68,6 +77,7 @@ type Snapshot = {
   users: UserRow[];
   payments: PaymentRow[];
   reviews: ReviewRow[];
+  notifications: NotificationRow[];
 };
 
 function cloneSnapshot(s: Snapshot): Snapshot {
@@ -78,6 +88,7 @@ function cloneSnapshot(s: Snapshot): Snapshot {
     users: s.users.map((r) => ({ ...r })),
     payments: s.payments.map((r) => ({ ...r })),
     reviews: s.reviews.map((r) => ({ ...r })),
+    notifications: s.notifications.map((r) => ({ ...r })),
   };
 }
 
@@ -207,8 +218,22 @@ export class FakePrismaClient {
       users: [],
       payments: [],
       reviews: [],
+      notifications: [],
     }
   ) {}
+
+  user = {
+    findUnique: async ({
+      where,
+      select: _select,
+    }: {
+      where: { id: string };
+      select?: Record<string, boolean>;
+    }) => {
+      const u = this.data.users.find((r) => r.id === where.id);
+      return u ? { ...u } : null;
+    },
+  };
 
   // Mutex que serializa transacciones concurrentes. Emula el efecto de
   // isolationLevel=Serializable a nivel de scheduler: dos tx que corren
@@ -261,6 +286,111 @@ export class FakePrismaClient {
       if (!b) throw new Error("not found");
       Object.assign(b, data);
       return { ...b };
+    },
+    findMany: async ({
+      where,
+      select: _select,
+    }: {
+      where?: {
+        status?: string;
+        checkIn?: { gte?: Date; lte?: Date };
+      };
+      select?: Record<string, unknown>;
+    }) => {
+      let rows = [...this.data.bookings];
+      if (where?.status) rows = rows.filter((r) => r.status === where.status);
+      if (where?.checkIn?.gte) {
+        const t = where.checkIn.gte.getTime();
+        rows = rows.filter((r) => r.checkIn.getTime() >= t);
+      }
+      if (where?.checkIn?.lte) {
+        const t = where.checkIn.lte.getTime();
+        rows = rows.filter((r) => r.checkIn.getTime() <= t);
+      }
+      return rows.map((b) => {
+        const stay = this.data.stays.find((s) => s.id === b.stayId);
+        return {
+          ...b,
+          stay: stay
+            ? {
+                title: (stay.title ?? "(sin título)") as string,
+                locationText: (stay.locationText ?? "(sin ubicación)") as string,
+              }
+            : undefined,
+        };
+      });
+    },
+  };
+
+  notification = {
+    create: async ({
+      data,
+    }: {
+      data: Omit<NotificationRow, "id" | "readAt" | "createdAt">;
+    }) => {
+      const row: NotificationRow = {
+        id: randomUUID(),
+        readAt: null,
+        createdAt: new Date(),
+        userId: data.userId,
+        type: data.type,
+        payload: data.payload ?? {},
+      };
+      this.data.notifications.push(row);
+      return { ...row };
+    },
+    findMany: async ({
+      where,
+      orderBy: _orderBy,
+      take,
+      select: _select,
+    }: {
+      where?: {
+        userId?: string;
+        type?: string;
+        readAt?: null;
+        OR?: Array<{ payload?: { path: string[]; equals: string } }>;
+      };
+      orderBy?: unknown;
+      take?: number;
+      select?: unknown;
+    }) => {
+      let rows = [...this.data.notifications];
+      if (where?.userId) rows = rows.filter((r) => r.userId === where.userId);
+      if (where?.type) rows = rows.filter((r) => r.type === where.type);
+      if (where?.readAt === null) rows = rows.filter((r) => r.readAt === null);
+      if (where?.OR) {
+        // OR de payload.path equals — usado por findReminderBookingIds
+        const wantedBookingIds = new Set(
+          where.OR.map((o) => o.payload?.equals).filter((v): v is string => !!v)
+        );
+        rows = rows.filter((r) => {
+          const id = (r.payload as { bookingId?: string }).bookingId;
+          return id !== undefined && wantedBookingIds.has(id);
+        });
+      }
+      rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      return take ? rows.slice(0, take) : rows;
+    },
+    count: async ({ where }: { where: { userId: string; readAt: null } }) =>
+      this.data.notifications.filter(
+        (r) => r.userId === where.userId && r.readAt === null
+      ).length,
+    updateMany: async ({
+      where,
+      data,
+    }: {
+      where: { userId: string; readAt: null };
+      data: Partial<NotificationRow>;
+    }) => {
+      let count = 0;
+      for (const r of this.data.notifications) {
+        if (r.userId === where.userId && r.readAt === null) {
+          Object.assign(r, data);
+          count++;
+        }
+      }
+      return { count };
     },
   };
 

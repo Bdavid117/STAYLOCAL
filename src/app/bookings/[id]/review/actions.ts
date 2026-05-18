@@ -10,6 +10,10 @@ import {
   BookingNotReviewableError,
   ReviewAlreadyExistsError,
 } from "@/modules/reviews/services/errors";
+import {
+  bookingContext,
+  notifyReviewReceived,
+} from "@/modules/notifications/notify-event";
 
 export type ReviewState = { error?: string } | null;
 
@@ -23,7 +27,7 @@ export async function submitReviewAction(
 
   try {
     const deps = reviewsDeps();
-    await submitReview(
+    const review = await submitReview(
       session.user.id,
       bookingId,
       {
@@ -34,6 +38,19 @@ export async function submitReviewAction(
     );
     revalidatePath(`/bookings/${bookingId}`);
     revalidatePath(`/stays/`);
+
+    // Side-effect: avisar al host que recibió una reseña.
+    const ctx = await bookingContext(deps.db, bookingId);
+    if (ctx) {
+      await notifyReviewReceived({
+        bookingId: ctx.bookingId,
+        stayId: ctx.stayId,
+        hostId: ctx.hostId,
+        stayTitle: ctx.stayTitle,
+        guestName: ctx.guestName,
+        rating: review.rating,
+      });
+    }
   } catch (err) {
     if (err && typeof err === "object" && "digest" in err) throw err;
     if (err instanceof ZodError) {

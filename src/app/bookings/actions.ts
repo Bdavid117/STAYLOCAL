@@ -14,6 +14,11 @@ import {
   HostCannotBookOwnStayError,
   StayNotBookableError,
 } from "@/modules/bookings/services/errors";
+import {
+  bookingContext,
+  notifyBookingCancelled,
+  notifyBookingCreated,
+} from "@/modules/notifications/notify-event";
 
 export type BookingActionState = { ok?: boolean; error?: string; bookingId?: string } | null;
 
@@ -40,6 +45,7 @@ export async function createBookingAction(
   const session = await auth();
   if (!session?.user?.id) redirect(`/login`);
 
+  let bookingId: string;
   try {
     const { db } = bookingsDeps();
     const booking = await createBooking(
@@ -51,15 +57,20 @@ export async function createBookingAction(
       },
       { db }
     );
+    bookingId = booking.id;
     revalidatePath(`/stays/${stayId}`);
     revalidatePath(`/bookings`);
-    // Flujo natural: reserva → pago. La página de pago redirige al
-    // detalle si ya estaba pagada.
-    redirect(`/bookings/${booking.id}/pay`);
+
+    // Side-effect: notificación in-app + correo al host (CU-26).
+    const ctx = await bookingContext(db, booking.id);
+    if (ctx) await notifyBookingCreated(ctx);
   } catch (err) {
     if (err && typeof err === "object" && "digest" in err) throw err;
     return { error: mapError(err) };
   }
+  // Flujo natural: reserva → pago. La página de pago redirige al
+  // detalle si ya estaba pagada.
+  redirect(`/bookings/${bookingId}/pay`);
 }
 
 export async function cancelBookingAction(bookingId: string): Promise<void> {
@@ -68,7 +79,16 @@ export async function cancelBookingAction(bookingId: string): Promise<void> {
 
   try {
     const { db, bookings } = bookingsDeps();
+    const ctxBefore = await bookingContext(db, bookingId);
     await cancelBooking(session.user.id, bookingId, { db, bookings });
+    if (ctxBefore) {
+      await notifyBookingCancelled({
+        bookingId: ctxBefore.bookingId,
+        guestId: ctxBefore.guestId,
+        hostId: ctxBefore.hostId,
+        stayTitle: ctxBefore.stayTitle,
+      });
+    }
   } catch (err) {
     if (err && typeof err === "object" && "digest" in err) throw err;
     console.error("cancelBookingAction", err);

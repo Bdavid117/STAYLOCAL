@@ -4,6 +4,7 @@ import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/ui/Logo";
 import { ButtonLink } from "@/components/ui/Button";
 import { LogoutButton } from "./logout-button";
+import { NotificationBell } from "./notification-bell";
 
 export async function Header() {
   const session = await auth();
@@ -26,7 +27,10 @@ export async function Header() {
           </div>
           <div className="flex items-center gap-2">
             {isAuth ? (
-              <LogoutButton />
+              <>
+                <NotificationBell />
+                <LogoutButton />
+              </>
             ) : (
               <>
                 <Link
