@@ -2,11 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { staysDeps } from "@/modules/stays/composition";
 import { prisma } from "@/shared/db";
+import { auth } from "@/shared/auth";
+import { BookingForm } from "./booking-form";
 
 type Props = { params: Promise<{ id: string }> };
 
 export default async function StayDetailPage({ params }: Props) {
   const { id } = await params;
+  const session = await auth();
   const { stays } = staysDeps();
   const stay = await stays.findByIdWithImages(id);
   if (!stay || stay.status !== "ACTIVE") notFound();
@@ -66,14 +69,11 @@ export default async function StayDetailPage({ params }: Props) {
             ${stay.pricePerNight.toLocaleString("es-CO")}{" "}
             <span className="text-sm font-normal text-gray-500">/ noche</span>
           </p>
-          {/* CTA de reserva (CU-17) llega cuando se cablea el módulo bookings */}
-          <button
-            type="button"
-            disabled
-            className="w-full rounded bg-gray-200 px-4 py-2 text-gray-500"
-          >
-            Reservar (próximamente)
-          </button>
+          <BookingForm
+            stayId={stay.id}
+            pricePerNight={stay.pricePerNight}
+            isAuthed={!!session?.user?.id}
+          />
           {host && (
             <p className="pt-2 text-sm">
               Anfitrión:{" "}

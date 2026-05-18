@@ -18,6 +18,9 @@ export async function Header() {
           </Link>
           {isAuth ? (
             <>
+              <Link href="/bookings" className="hover:underline">
+                Mis reservas
+              </Link>
               <Link href="/host/stays" className="hover:underline">
                 Mis alojamientos
               </Link>
