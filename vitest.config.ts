@@ -4,7 +4,8 @@ import path from "node:path";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/unit/**/*.test.ts"],
+    exclude: ["tests/e2e/**"],
     globals: false,
   },
   resolve: {

@@ -101,3 +101,22 @@ Mapa de contextos → casos de uso:
 ## Convenciones de proyecto
 
 Detalladas en `CLAUDE.md` (también leído por Claude Code para asistencia automatizada).
+
+## Documentación adicional
+
+Mapa completo en [`docs/README.md`](docs/README.md). Incluye:
+
+- **Diagramas UML** (Mermaid, renderizan en GitHub): casos de uso,
+  entidad-relación, secuencias de booking y pago, arquitectura por
+  capas, despliegue.
+- **8 ADRs** con las decisiones arquitectónicas clave (monolito,
+  UNIQUE como guard de concurrencia, ports & adapters, etc.).
+- **Guía de despliegue** a Vercel + Neon + Resend en
+  [`docs/deploy.md`](docs/deploy.md).
+
+## Tests
+
+```bash
+pnpm test            # 52 tests unitarios (vitest), <2s
+pnpm test:e2e        # Playwright end-to-end (requiere docker compose up -d)
+```

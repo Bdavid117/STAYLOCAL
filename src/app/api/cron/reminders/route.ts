@@ -1,17 +1,17 @@
-// POST /api/cron/reminders
+// GET|POST /api/cron/reminders
 //
 // Endpoint para que un scheduler externo (Vercel Cron, GitHub Actions,
 // crontab del SO) dispare los recordatorios CU-27 una vez al día.
 //
-// Protegido con un secret en header Authorization: Bearer <CRON_SECRET>.
-// Si CRON_SECRET no está configurado, el endpoint responde 503 — no se
-// considera "abierto por defecto".
+// Vercel Cron envía GET con Authorization: Bearer $CRON_SECRET cuando
+// la env var está configurada. Aceptamos POST también para invocación
+// manual desde curl u otros schedulers.
 
 import { NextResponse } from "next/server";
 import { notificationsDeps } from "@/modules/notifications/composition";
 import { sendUpcomingReminders } from "@/modules/notifications/services/send-upcoming-reminders";
 
-export async function POST(req: Request) {
+async function handle(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -25,7 +25,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
-  // daysAhead opcional via query string (?days=3).
   const url = new URL(req.url);
   const daysParam = url.searchParams.get("days");
   const daysAhead = daysParam ? Number(daysParam) : undefined;
@@ -37,3 +36,6 @@ export async function POST(req: Request) {
 
   return NextResponse.json(result);
 }
+
+export const GET = handle;
+export const POST = handle;
