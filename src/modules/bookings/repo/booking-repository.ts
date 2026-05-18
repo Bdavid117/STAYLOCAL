@@ -55,6 +55,7 @@ export class PrismaBookingRepository implements BookingRepository {
             images: { orderBy: { orderIdx: "asc" }, take: 1, select: { url: true } },
           },
         },
+        payment: { select: { status: true } },
       },
     });
     return rows.map((r) => ({
@@ -65,6 +66,7 @@ export class PrismaBookingRepository implements BookingRepository {
         locationText: r.stay.locationText,
         coverImageUrl: r.stay.images[0]?.url ?? null,
       },
+      paymentStatus: r.payment?.status ?? null,
     }));
   }
 

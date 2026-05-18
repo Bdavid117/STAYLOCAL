@@ -53,7 +53,9 @@ export async function createBookingAction(
     );
     revalidatePath(`/stays/${stayId}`);
     revalidatePath(`/bookings`);
-    redirect(`/bookings/${booking.id}`);
+    // Flujo natural: reserva → pago. La página de pago redirige al
+    // detalle si ya estaba pagada.
+    redirect(`/bookings/${booking.id}/pay`);
   } catch (err) {
     if (err && typeof err === "object" && "digest" in err) throw err;
     return { error: mapError(err) };

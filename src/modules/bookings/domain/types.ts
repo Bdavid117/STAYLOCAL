@@ -21,6 +21,7 @@ export type BookingWithStay = Booking & {
     locationText: string;
     coverImageUrl: string | null;
   };
+  paymentStatus: "PENDING" | "PAID" | "FAILED" | "REFUNDED" | null;
 };
 
 export interface BookingRepository {

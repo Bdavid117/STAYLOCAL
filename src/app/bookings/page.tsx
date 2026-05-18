@@ -106,8 +106,14 @@ export default async function MyBookingsPage({ searchParams }: Props) {
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-col items-end justify-between gap-3 p-4">
-                  <Badge tone={STATUS_TONE[b.status]}>{STATUS_LABELS[b.status]}</Badge>
+                <div className="flex flex-col items-end justify-between gap-2 p-4">
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge tone={STATUS_TONE[b.status]}>{STATUS_LABELS[b.status]}</Badge>
+                    {b.status === "CONFIRMED" && b.paymentStatus !== "PAID" && (
+                      <Badge tone="ochre">Pago pendiente</Badge>
+                    )}
+                    {b.paymentStatus === "PAID" && <Badge tone="moss">Pagada</Badge>}
+                  </div>
                   <Link
                     href={`/bookings/${b.id}`}
                     className="text-xs text-terracotta hover:underline"

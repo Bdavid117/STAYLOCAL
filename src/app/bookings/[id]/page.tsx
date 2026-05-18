@@ -5,6 +5,8 @@ import { prisma } from "@/shared/db";
 import { cancelBookingAction } from "@/app/bookings/actions";
 import { Container, SectionLabel } from "@/components/ui/Container";
 import { Badge } from "@/components/ui/Badge";
+import { Banner } from "@/components/ui/Banner";
+import { ButtonLink } from "@/components/ui/Button";
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: "Pendiente",
@@ -20,10 +22,14 @@ const STATUS_TONE = {
   COMPLETED: "terracotta",
 } as const;
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ paid?: string }>;
+};
 
-export default async function BookingDetailPage({ params }: Props) {
+export default async function BookingDetailPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { paid } = await searchParams;
   const session = await requireSession();
 
   const booking = await prisma.booking.findFirst({
@@ -38,6 +44,7 @@ export default async function BookingDetailPage({ params }: Props) {
           images: { orderBy: { orderIdx: "asc" }, take: 1, select: { url: true } },
         },
       },
+      payment: true,
     },
   });
   if (!booking) notFound();
@@ -50,6 +57,10 @@ export default async function BookingDetailPage({ params }: Props) {
     booking.status !== "CANCELLED" &&
     booking.status !== "COMPLETED" &&
     booking.checkIn.getTime() > Date.now();
+  const isPaid = booking.payment?.status === "PAID";
+  const needsPayment = !isPaid && booking.status === "CONFIRMED";
+  const wasRefunded = booking.payment?.status === "REFUNDED";
+  const paymentFailed = booking.payment?.status === "FAILED";
 
   const cancelAction = cancelBookingAction.bind(null, booking.id);
   const serial = booking.id.slice(-6).toUpperCase();
@@ -69,8 +80,39 @@ export default async function BookingDetailPage({ params }: Props) {
           <h1 className="font-display text-5xl leading-tight">{booking.stay.title}</h1>
           <p className="text-ink-soft">{booking.stay.locationText}</p>
         </div>
-        <Badge tone={STATUS_TONE[booking.status]}>{STATUS_LABELS[booking.status]}</Badge>
+        <div className="flex flex-col items-end gap-2">
+          <Badge tone={STATUS_TONE[booking.status]}>{STATUS_LABELS[booking.status]}</Badge>
+          {isPaid && <Badge tone="moss">Pagada</Badge>}
+          {needsPayment && <Badge tone="ochre">Pago pendiente</Badge>}
+          {wasRefunded && <Badge tone="neutral">Reembolsada</Badge>}
+          {paymentFailed && <Badge tone="terracotta">Pago rechazado</Badge>}
+        </div>
       </header>
+
+      {paid && isPaid && (
+        <Banner tone="success" className="mb-6">
+          Pago confirmado. El comprobante salió al correo y queda disponible en esta página.
+        </Banner>
+      )}
+
+      {needsPayment && (
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-ochre/40 bg-ochre/[0.08] p-5">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+              Pago pendiente
+            </p>
+            <p className="mt-1 font-display text-2xl text-ink">
+              Confirma tu pago para recibir el comprobante.
+            </p>
+            <p className="mt-1 text-sm text-ink-soft">
+              Total: <span className="num font-medium">${booking.totalAmount.toNumber().toLocaleString("es-CO")} COP</span>
+            </p>
+          </div>
+          <ButtonLink href={`/bookings/${booking.id}/pay`} size="lg">
+            {paymentFailed ? "Reintentar pago" : "Pagar ahora"}
+          </ButtonLink>
+        </div>
+      )}
 
       {booking.stay.images[0] && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -88,7 +130,7 @@ export default async function BookingDetailPage({ params }: Props) {
             <Datum label="Check-out" value={fmt.format(booking.checkOut)} />
             <Datum label="Noches" value={String(nights)} mono />
             <Datum
-              label="Total cobrado"
+              label="Total"
               value={`$${booking.totalAmount.toNumber().toLocaleString("es-CO")}`}
               mono
             />
@@ -97,7 +139,7 @@ export default async function BookingDetailPage({ params }: Props) {
           <div className="space-y-3 rounded-2xl border border-line bg-paper p-6">
             <SectionLabel serial="§01">Próximos pasos</SectionLabel>
             <ul className="space-y-2 text-sm text-ink-soft">
-              <li>· Recibirás un correo con el comprobante.</li>
+              <li>· {isPaid ? "Tu pago está confirmado." : "Confirma el pago para asegurar tu reserva."}</li>
               <li>· El anfitrión puede contactarte para coordinar el ingreso.</li>
               <li>· Si cancelas antes del check-in, las fechas se liberan al instante.</li>
             </ul>
@@ -120,6 +162,24 @@ export default async function BookingDetailPage({ params }: Props) {
               / noche
             </p>
           </div>
+
+          {isPaid && (
+            <div className="space-y-3 rounded-2xl border border-moss/30 bg-moss/[0.05] p-6">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-moss">
+                Comprobante
+              </p>
+              <p className="text-sm text-ink-soft">
+                Tu pago quedó registrado. Imprime o guarda el comprobante en PDF.
+              </p>
+              <Link
+                href={`/bookings/${booking.id}/receipt`}
+                className="inline-flex h-10 items-center justify-center rounded-md bg-moss px-4 text-sm font-medium text-paper hover:bg-moss/90"
+                target="_blank"
+              >
+                Ver comprobante →
+              </Link>
+            </div>
+          )}
 
           {canCancel && (
             <form

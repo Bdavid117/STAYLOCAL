@@ -11,6 +11,8 @@ type StayRow = {
   hostId: string;
   status: "ACTIVE" | "INACTIVE" | "DELETED";
   pricePerNight: Prisma.Decimal;
+  title?: string;
+  locationText?: string;
 };
 
 type BookingRow = {
@@ -32,10 +34,29 @@ type AvailabilityRow = {
   bookingId: string | null;
 };
 
+type UserRow = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+type PaymentRow = {
+  id: string;
+  bookingId: string;
+  amount: Prisma.Decimal;
+  currency: string;
+  provider: string;
+  providerRef: string | null;
+  status: "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+  paidAt: Date | null;
+};
+
 type Snapshot = {
   stays: StayRow[];
   bookings: BookingRow[];
   availability: AvailabilityRow[];
+  users: UserRow[];
+  payments: PaymentRow[];
 };
 
 function cloneSnapshot(s: Snapshot): Snapshot {
@@ -43,6 +64,8 @@ function cloneSnapshot(s: Snapshot): Snapshot {
     stays: s.stays.map((r) => ({ ...r })),
     bookings: s.bookings.map((r) => ({ ...r })),
     availability: s.availability.map((r) => ({ ...r })),
+    users: s.users.map((r) => ({ ...r })),
+    payments: s.payments.map((r) => ({ ...r })),
   };
 }
 
@@ -141,7 +164,15 @@ class TxClient {
 }
 
 export class FakePrismaClient {
-  constructor(public data: Snapshot = { stays: [], bookings: [], availability: [] }) {}
+  constructor(
+    public data: Snapshot = {
+      stays: [],
+      bookings: [],
+      availability: [],
+      users: [],
+      payments: [],
+    }
+  ) {}
 
   // Mutex que serializa transacciones concurrentes. Emula el efecto de
   // isolationLevel=Serializable a nivel de scheduler: dos tx que corren
@@ -154,17 +185,117 @@ export class FakePrismaClient {
       this.data.bookings.find((b) => b.id === where.id) ?? null,
     findFirst: async ({
       where,
+      include,
     }: {
       where: { id: string; guestId?: string };
-    }) =>
-      this.data.bookings.find(
+      include?: { stay?: unknown; guest?: unknown };
+    }) => {
+      const b = this.data.bookings.find(
         (b) => b.id === where.id && (where.guestId === undefined || b.guestId === where.guestId)
-      ) ?? null,
+      );
+      if (!b) return null;
+      if (!include) return { ...b };
+      const stay = include.stay ? this.data.stays.find((s) => s.id === b.stayId) : undefined;
+      const host = stay
+        ? this.data.users.find((u) => u.id === (stay as StayRow).hostId)
+        : undefined;
+      const guest = include.guest
+        ? this.data.users.find((u) => u.id === b.guestId)
+        : undefined;
+      return {
+        ...b,
+        ...(stay
+          ? {
+              stay: {
+                title: (stay as StayRow & { title?: string }).title ?? "(sin título)",
+                locationText:
+                  (stay as StayRow & { locationText?: string }).locationText ?? "(sin ubicación)",
+                pricePerNight: (stay as StayRow).pricePerNight,
+                host: host ? { name: host.name } : { name: "Anfitrión" },
+              },
+            }
+          : {}),
+        ...(guest ? { guest: { name: guest.name, email: guest.email } } : {}),
+      };
+    },
     update: async ({ where, data }: { where: { id: string }; data: Partial<BookingRow> }) => {
       const b = this.data.bookings.find((r) => r.id === where.id);
       if (!b) throw new Error("not found");
       Object.assign(b, data);
       return { ...b };
+    },
+  };
+
+  payment = {
+    findUnique: async ({
+      where,
+      include,
+    }: {
+      where: { id?: string; bookingId?: string };
+      include?: { booking?: { include?: { stay?: unknown; guest?: unknown } } };
+    }) => {
+      const p = this.data.payments.find(
+        (r) =>
+          (where.id !== undefined && r.id === where.id) ||
+          (where.bookingId !== undefined && r.bookingId === where.bookingId)
+      );
+      if (!p) return null;
+      if (!include?.booking) return { ...p };
+      const b = this.data.bookings.find((b) => b.id === p.bookingId);
+      if (!b) return { ...p };
+      const stay = this.data.stays.find((s) => s.id === b.stayId);
+      const host = stay ? this.data.users.find((u) => u.id === (stay as StayRow).hostId) : undefined;
+      const guest = this.data.users.find((u) => u.id === b.guestId);
+      return {
+        ...p,
+        booking: {
+          ...b,
+          stay: stay
+            ? {
+                ...stay,
+                title: (stay as StayRow & { title?: string }).title ?? "(sin título)",
+                locationText:
+                  (stay as StayRow & { locationText?: string }).locationText ?? "(sin ubicación)",
+                pricePerNight: (stay as StayRow).pricePerNight,
+                host: host ? { name: host.name } : { name: "Anfitrión" },
+              }
+            : undefined,
+          guest: guest ? { name: guest.name, email: guest.email } : undefined,
+        },
+      };
+    },
+    create: async ({ data }: { data: Omit<PaymentRow, "id" | "providerRef" | "paidAt" | "status"> & { status?: PaymentRow["status"] } }) => {
+      const row: PaymentRow = {
+        id: randomUUID(),
+        bookingId: data.bookingId,
+        amount: new Prisma.Decimal(data.amount.toString()),
+        currency: data.currency,
+        provider: data.provider,
+        providerRef: null,
+        status: data.status ?? "PENDING",
+        paidAt: null,
+      };
+      const exists = this.data.payments.find((p) => p.bookingId === row.bookingId);
+      if (exists) {
+        throw new Prisma.PrismaClientKnownRequestError(
+          "Unique constraint failed on the fields: (`bookingId`)",
+          { code: "P2002", clientVersion: "fake", meta: { target: ["bookingId"] } }
+        );
+      }
+      this.data.payments.push(row);
+      return { ...row };
+    },
+    update: async ({
+      where,
+      data,
+    }: {
+      where: { id: string };
+      data: Partial<PaymentRow>;
+    }) => {
+      const p = this.data.payments.find((r) => r.id === where.id);
+      if (!p) throw new Error("payment not found");
+      Object.assign(p, data);
+      return { ...p };
     },
   };
 
@@ -196,13 +327,21 @@ export class FakePrismaClient {
     hostId: string;
     pricePerNight: number | string;
     status?: "ACTIVE" | "INACTIVE" | "DELETED";
+    title?: string;
+    locationText?: string;
   }) {
     this.data.stays.push({
       id: s.id,
       hostId: s.hostId,
       status: s.status ?? "ACTIVE",
       pricePerNight: new Prisma.Decimal(s.pricePerNight.toString()),
-    });
+      ...(s.title ? { title: s.title } : {}),
+      ...(s.locationText ? { locationText: s.locationText } : {}),
+    } as StayRow);
+  }
+
+  seedUser(u: { id: string; name: string; email: string }) {
+    this.data.users.push({ id: u.id, name: u.name, email: u.email });
   }
 }
 
