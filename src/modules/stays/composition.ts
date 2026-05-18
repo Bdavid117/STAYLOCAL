@@ -1,0 +1,15 @@
+import { prisma } from "@/shared/db";
+import { getStorage } from "@/shared/storage";
+import { PrismaStayRepository } from "@/modules/stays/repo/stay-repository";
+import { PrismaStayImageRepository } from "@/modules/stays/repo/stay-image-repository";
+import { PrismaAvailabilityRepository } from "@/modules/stays/repo/availability-repository";
+
+export function staysDeps() {
+  return {
+    stays: new PrismaStayRepository(prisma),
+    images: new PrismaStayImageRepository(prisma),
+    availability: new PrismaAvailabilityRepository(prisma),
+    storage: getStorage(),
+    db: prisma,
+  };
+}
