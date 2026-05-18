@@ -1,0 +1,179 @@
+// Esquema StayLocal — mapea 1:1 los 8 ILF del documento de estimación.
+// ILF-01 Usuarios, ILF-02 Alojamientos, ILF-03 Imágenes, ILF-04 Reservas,
+// ILF-05 Calificaciones, ILF-06 Disponibilidad, ILF-07 Pagos, ILF-08 Notificaciones.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  GUEST
+  HOST
+  ADMIN
+}
+
+enum StayStatus {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  BLOCKED
+  BOOKED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum NotificationType {
+  BOOKING_CREATED
+  BOOKING_CANCELLED
+  PAYMENT_RECEIVED
+  REVIEW_RECEIVED
+  REMINDER
+}
+
+// ILF-01
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(GUEST)
+  name         String
+  phone        String?
+  photoUrl     String?
+  createdAt    DateTime @default(now())
+
+  stays         Stay[]
+  bookings      Booking[]
+  reviews       Review[]
+  notifications Notification[]
+}
+
+// ILF-02
+model Stay {
+  id            String     @id @default(cuid())
+  hostId        String
+  host          User       @relation(fields: [hostId], references: [id])
+  title         String
+  description   String
+  pricePerNight Decimal    @db.Decimal(10, 2)
+  capacity      Int
+  lat           Float
+  lng           Float
+  locationText  String
+  status        StayStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now())
+
+  images       StayImage[]
+  availability Availability[]
+  bookings     Booking[]
+  reviews      Review[]
+
+  @@index([hostId])
+  @@index([lat, lng])
+}
+
+// ILF-03
+model StayImage {
+  id       String @id @default(cuid())
+  stayId   String
+  stay     Stay   @relation(fields: [stayId], references: [id], onDelete: Cascade)
+  url      String
+  orderIdx Int    @default(0)
+
+  @@index([stayId])
+}
+
+// ILF-06 — la UNIQUE(stayId,date) es la barrera contra doble reserva (CU-20).
+model Availability {
+  id        String             @id @default(cuid())
+  stayId    String
+  stay      Stay               @relation(fields: [stayId], references: [id], onDelete: Cascade)
+  date      DateTime           @db.Date
+  status    AvailabilityStatus @default(AVAILABLE)
+  bookingId String?
+
+  @@unique([stayId, date])
+  @@index([stayId])
+}
+
+// ILF-04
+model Booking {
+  id          String        @id @default(cuid())
+  guestId     String
+  guest       User          @relation(fields: [guestId], references: [id])
+  stayId      String
+  stay        Stay          @relation(fields: [stayId], references: [id])
+  checkIn     DateTime      @db.Date
+  checkOut    DateTime      @db.Date
+  totalAmount Decimal       @db.Decimal(10, 2)
+  status      BookingStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+
+  payment Payment?
+  review  Review?
+
+  @@index([guestId, status])
+  @@index([stayId])
+}
+
+// ILF-07
+model Payment {
+  id          String        @id @default(cuid())
+  bookingId   String        @unique
+  booking     Booking       @relation(fields: [bookingId], references: [id])
+  amount      Decimal       @db.Decimal(10, 2)
+  currency    String        @default("USD")
+  provider    String        @default("fake") // 'fake' | 'stripe'
+  providerRef String?
+  status      PaymentStatus @default(PENDING)
+  paidAt      DateTime?
+}
+
+// ILF-05
+model Review {
+  id        String   @id @default(cuid())
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  stayId    String
+  stay      Stay     @relation(fields: [stayId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  rating    Int // 1..5 — validado en la capa de aplicación
+  comment   String
+  createdAt DateTime @default(now())
+
+  @@index([stayId])
+}
+
+// ILF-08
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  type      NotificationType
+  payload   Json
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt])
+}
