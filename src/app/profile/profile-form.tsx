@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState, useTransition } from "react";
 import { updateProfileAction, type ProfileState } from "./actions";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -11,25 +10,26 @@ type Props = {
   initial: { name: string; phone: string | null; photoUrl: string | null };
 };
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="md" disabled={pending}>
-      {pending ? "Guardando…" : "Guardar cambios"}
-    </Button>
-  );
-}
-
+// Manejo local del feedback (en vez de useActionState) porque la action
+// llama revalidatePath, lo cual re-renderiza el Server Component padre y
+// reinicializa el estado del action — el banner desaparecía antes de
+// que el usuario lo viera.
 export function ProfileForm({ initial }: Props) {
-  const [state, formAction] = useActionState<ProfileState, FormData>(
-    updateProfileAction,
-    null
-  );
+  const [pending, startTransition] = useTransition();
+  const [feedback, setFeedback] = useState<ProfileState>(null);
+
+  async function onSubmit(formData: FormData) {
+    setFeedback(null);
+    startTransition(async () => {
+      const result = await updateProfileAction(null, formData);
+      setFeedback(result);
+    });
+  }
 
   return (
-    <form action={formAction} className="space-y-5">
-      {state?.ok && <Banner tone="success">Perfil actualizado.</Banner>}
-      {state?.error && <Banner tone="error">{state.error}</Banner>}
+    <form action={onSubmit} className="space-y-5">
+      {feedback?.ok && <Banner tone="success">Perfil actualizado.</Banner>}
+      {feedback?.error && <Banner tone="error">{feedback.error}</Banner>}
 
       <Field label="Nombre" name="name" required defaultValue={initial.name} />
       <Field
@@ -52,7 +52,9 @@ export function ProfileForm({ initial }: Props) {
         <p className="text-xs text-ink-mute">
           Los cambios son visibles para huéspedes que vean tu perfil de anfitrión.
         </p>
-        <SubmitButton />
+        <Button type="submit" size="md" disabled={pending}>
+          {pending ? "Guardando…" : "Guardar cambios"}
+        </Button>
       </div>
     </form>
   );

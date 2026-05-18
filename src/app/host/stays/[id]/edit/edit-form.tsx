@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState, useTransition } from "react";
 import { editStayAction, type ActionState } from "@/app/host/stays/actions";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -18,15 +17,6 @@ type Initial = {
   status: "ACTIVE" | "INACTIVE";
 };
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="md" disabled={pending}>
-      {pending ? "Guardando…" : "Guardar cambios"}
-    </Button>
-  );
-}
-
 export function EditStayForm({
   stayId,
   initial,
@@ -34,13 +24,21 @@ export function EditStayForm({
   stayId: string;
   initial: Initial;
 }) {
-  const action = editStayAction.bind(null, stayId);
-  const [state, formAction] = useActionState<ActionState, FormData>(action, null);
+  const [pending, startTransition] = useTransition();
+  const [feedback, setFeedback] = useState<ActionState>(null);
+
+  async function onSubmit(formData: FormData) {
+    setFeedback(null);
+    startTransition(async () => {
+      const result = await editStayAction(stayId, null, formData);
+      setFeedback(result);
+    });
+  }
 
   return (
-    <form action={formAction} className="space-y-5">
-      {state?.ok && <Banner tone="success">Cambios guardados.</Banner>}
-      {state?.error && <Banner tone="error">{state.error}</Banner>}
+    <form action={onSubmit} className="space-y-5">
+      {feedback?.ok && <Banner tone="success">Cambios guardados.</Banner>}
+      {feedback?.error && <Banner tone="error">{feedback.error}</Banner>}
 
       <Field label="Título" name="title" defaultValue={initial.title} required />
 
@@ -101,7 +99,9 @@ export function EditStayForm({
       </div>
 
       <div className="flex items-center justify-end border-t border-line pt-5">
-        <SubmitButton />
+        <Button type="submit" size="md" disabled={pending}>
+          {pending ? "Guardando…" : "Guardar cambios"}
+        </Button>
       </div>
     </form>
   );

@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState, useTransition, useRef } from "react";
 import {
   uploadStayImageAction,
   type ActionState,
@@ -9,21 +8,22 @@ import {
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="sm" disabled={pending}>
-      {pending ? "Subiendo…" : "Subir imagen"}
-    </Button>
-  );
-}
-
 export function UploadImageForm({ stayId }: { stayId: string }) {
-  const action = uploadStayImageAction.bind(null, stayId);
-  const [state, formAction] = useActionState<ActionState, FormData>(action, null);
+  const [pending, startTransition] = useTransition();
+  const [feedback, setFeedback] = useState<ActionState>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  async function onSubmit(formData: FormData) {
+    setFeedback(null);
+    startTransition(async () => {
+      const result = await uploadStayImageAction(stayId, null, formData);
+      setFeedback(result);
+      if (result?.ok) formRef.current?.reset();
+    });
+  }
 
   return (
-    <form action={formAction} className="space-y-3">
+    <form ref={formRef} action={onSubmit} className="space-y-3">
       <label className="block">
         <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-soft">
           Nueva imagen
@@ -37,10 +37,12 @@ export function UploadImageForm({ stayId }: { stayId: string }) {
         />
       </label>
       <p className="text-xs text-ink-mute">JPG, PNG o WEBP. Máximo 5 MB.</p>
-      {state?.error && <Banner tone="error">{state.error}</Banner>}
-      {state?.ok && <Banner tone="success">Imagen subida.</Banner>}
+      {feedback?.error && <Banner tone="error">{feedback.error}</Banner>}
+      {feedback?.ok && <Banner tone="success">Imagen subida.</Banner>}
       <div className="flex justify-end">
-        <SubmitButton />
+        <Button type="submit" size="sm" disabled={pending}>
+          {pending ? "Subiendo…" : "Subir imagen"}
+        </Button>
       </div>
     </form>
   );

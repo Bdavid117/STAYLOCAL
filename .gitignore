@@ -21,3 +21,8 @@ public/uploads/*
 
 prisma/dev.db
 prisma/dev.db-journal
+
+.playwright-mcp/
+.env.docker.local
+*.png
+!docs/**/*.png

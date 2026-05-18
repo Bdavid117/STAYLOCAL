@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState, useTransition } from "react";
 import {
   manageAvailabilityAction,
   type ActionState,
@@ -10,23 +9,22 @@ import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { SelectField } from "@/components/ui/Field";
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="md" disabled={pending} className="w-full">
-      {pending ? "Aplicando…" : "Aplicar al calendario"}
-    </Button>
-  );
-}
-
 export function AvailabilityForm({ stayId }: { stayId: string }) {
-  const action = manageAvailabilityAction.bind(null, stayId);
-  const [state, formAction] = useActionState<ActionState, FormData>(action, null);
+  const [pending, startTransition] = useTransition();
+  const [feedback, setFeedback] = useState<ActionState>(null);
+
+  async function onSubmit(formData: FormData) {
+    setFeedback(null);
+    startTransition(async () => {
+      const result = await manageAvailabilityAction(stayId, null, formData);
+      setFeedback(result);
+    });
+  }
 
   return (
-    <form action={formAction} className="space-y-5">
-      {state?.ok && <Banner tone="success">Calendario actualizado.</Banner>}
-      {state?.error && <Banner tone="error">{state.error}</Banner>}
+    <form action={onSubmit} className="space-y-5">
+      {feedback?.ok && <Banner tone="success">Calendario actualizado.</Banner>}
+      {feedback?.error && <Banner tone="error">{feedback.error}</Banner>}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <label className="block">
@@ -62,7 +60,9 @@ export function AvailabilityForm({ stayId }: { stayId: string }) {
         bloqueaste — no toca reservas activas.
       </p>
 
-      <SubmitButton />
+      <Button type="submit" size="md" disabled={pending} className="w-full">
+        {pending ? "Aplicando…" : "Aplicar al calendario"}
+      </Button>
     </form>
   );
 }

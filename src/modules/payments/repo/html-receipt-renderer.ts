@@ -24,7 +24,11 @@ export class HtmlReceiptRenderer implements ReceiptRenderer {
   <meta charset="utf-8" />
   <title>Comprobante №${payment.id.slice(-6).toUpperCase()} · StayLocal</title>
   <style>
-    body { font-family: Georgia, "Times New Roman", serif; color: #1a1612; background: #f5f1ea; margin: 0; padding: 48px 24px; }
+    body { font-family: Georgia, "Times New Roman", serif; color: #1a1612; background: #f5f1ea; margin: 0; padding: 80px 24px 48px; }
+    .toolbar { position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 14px 22px; background: rgba(245, 241, 234, 0.94); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(26,22,18,0.12); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; color: #4a413a; }
+    .toolbar a { color: #b85342; text-decoration: none; }
+    .toolbar a:hover { text-decoration: underline; }
+    .toolbar kbd { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; background: #fbf8f2; border: 1px solid rgba(26,22,18,0.12); padding: 1px 5px; border-radius: 3px; }
     .sheet { max-width: 640px; margin: 0 auto; background: #fbf8f2; padding: 56px 56px 48px; border: 1px solid rgba(26,22,18,0.12); }
     .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
     .kicker { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: #8a7e6f; }
@@ -47,10 +51,15 @@ export class HtmlReceiptRenderer implements ReceiptRenderer {
     @media print {
       body { background: #ffffff; padding: 0; }
       .sheet { border: 0; box-shadow: none; }
+      .toolbar { display: none; }
     }
   </style>
 </head>
 <body>
+  <div class="toolbar">
+    <a href="/bookings/${payment.bookingId}">← Volver a la reserva</a>
+    <span>Usa <kbd>⌘P</kbd> para imprimir o guardar como PDF.</span>
+  </div>
   <div class="sheet">
     <p class="kicker"><span style="color:#b85342;">№ ${payment.id.slice(-6).toUpperCase()}</span> &nbsp;/&nbsp; Emitido el ${issued}</p>
     <div class="brand" style="margin-top:6px;">Stay<em>local</em><span class="dot"></span></div>

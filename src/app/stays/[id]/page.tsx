@@ -74,7 +74,11 @@ export default async function StayDetailPage({ params }: Props) {
         </div>
       </header>
 
-      {stay.images.length > 0 && <Gallery images={stay.images.map((i) => i.url)} title={stay.title} />}
+      {stay.images.length > 0 ? (
+        <Gallery images={stay.images.map((i) => i.url)} title={stay.title} />
+      ) : (
+        <GalleryPlaceholder />
+      )}
 
       <section className="mt-16 grid grid-cols-1 gap-12 lg:grid-cols-12">
         <article className="space-y-10 lg:col-span-7">
@@ -220,6 +224,34 @@ function Spec({
         {value}
         {unit && <span className="ml-1 text-xs text-ink-mute">{unit}</span>}
       </p>
+    </div>
+  );
+}
+
+function GalleryPlaceholder() {
+  return (
+    <div className="relative flex aspect-[21/9] w-full items-center justify-center overflow-hidden rounded-xl border border-dashed border-line bg-bone-2/40">
+      <div className="text-center">
+        <svg
+          viewBox="0 0 64 64"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="mx-auto mb-3 h-12 w-12 text-ink-mute/50"
+        >
+          <path d="M10 52V20l22-12 22 12v32H10z" />
+          <path d="M24 52V36h16v16" />
+          <circle cx="40" cy="22" r="2" />
+        </svg>
+        <p className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
+          Galería en construcción
+        </p>
+        <p className="mt-1 font-display text-lg italic text-ink-soft">
+          El anfitrión aún no ha subido fotos.
+        </p>
+      </div>
     </div>
   );
 }

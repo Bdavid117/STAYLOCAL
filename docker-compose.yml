@@ -8,7 +8,10 @@ services:
       POSTGRES_PASSWORD: staylocal
       POSTGRES_DB: staylocal
     ports:
-      - "5432:5432"
+      # Por defecto expone en host:5432. Si ese puerto ya está ocupado
+      # (otros postgres locales), exporta POSTGRES_PORT=5434 antes de
+      # `docker compose up` y actualiza el DATABASE_URL del .env.
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - staylocal_pgdata:/var/lib/postgresql/data
 
