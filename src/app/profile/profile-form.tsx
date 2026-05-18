@@ -3,6 +3,9 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { updateProfileAction, type ProfileState } from "./actions";
+import { Banner } from "@/components/ui/Banner";
+import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
 
 type Props = {
   initial: { name: string; phone: string | null; photoUrl: string | null };
@@ -11,13 +14,9 @@ type Props = {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded bg-brand px-4 py-2 text-white hover:bg-brand-dark disabled:opacity-60"
-    >
-      {pending ? "Guardando…" : "Guardar"}
-    </button>
+    <Button type="submit" size="md" disabled={pending}>
+      {pending ? "Guardando…" : "Guardar cambios"}
+    </Button>
   );
 }
 
@@ -28,42 +27,33 @@ export function ProfileForm({ initial }: Props) {
   );
 
   return (
-    <form action={formAction} className="space-y-4">
-      {state?.ok && (
-        <p className="rounded bg-green-50 px-3 py-2 text-sm text-green-700">Perfil actualizado.</p>
-      )}
-      {state?.error && (
-        <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
-      )}
-      <div>
-        <label className="block text-sm font-medium">Nombre</label>
-        <input
-          name="name"
-          required
-          defaultValue={initial.name}
-          className="mt-1 w-full rounded border px-3 py-2"
-        />
+    <form action={formAction} className="space-y-5">
+      {state?.ok && <Banner tone="success">Perfil actualizado.</Banner>}
+      {state?.error && <Banner tone="error">{state.error}</Banner>}
+
+      <Field label="Nombre" name="name" required defaultValue={initial.name} />
+      <Field
+        label="Teléfono"
+        name="phone"
+        defaultValue={initial.phone ?? ""}
+        placeholder="+57 300 123 4567"
+        hint="Opcional. Solo dígitos y el prefijo país."
+      />
+      <Field
+        label="Foto de perfil (URL)"
+        name="photoUrl"
+        type="url"
+        defaultValue={initial.photoUrl ?? ""}
+        placeholder="https://…"
+        hint="URL pública a una imagen cuadrada."
+      />
+
+      <div className="flex items-center justify-between border-t border-line pt-5">
+        <p className="text-xs text-ink-mute">
+          Los cambios son visibles para huéspedes que vean tu perfil de anfitrión.
+        </p>
+        <SubmitButton />
       </div>
-      <div>
-        <label className="block text-sm font-medium">Teléfono</label>
-        <input
-          name="phone"
-          defaultValue={initial.phone ?? ""}
-          placeholder="+573001234567"
-          className="mt-1 w-full rounded border px-3 py-2"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium">Foto de perfil (URL)</label>
-        <input
-          name="photoUrl"
-          type="url"
-          defaultValue={initial.photoUrl ?? ""}
-          placeholder="https://…"
-          className="mt-1 w-full rounded border px-3 py-2"
-        />
-      </div>
-      <SubmitButton />
     </form>
   );
 }

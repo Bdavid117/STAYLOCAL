@@ -1,6 +1,9 @@
-import Link from "next/link";
 import { prisma } from "@/shared/db";
 import { searchStays } from "@/modules/stays/services/search-stays";
+import { Container, SectionLabel } from "@/components/ui/Container";
+import { Banner } from "@/components/ui/Banner";
+import { StayCard } from "@/components/ui/StayCard";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -30,91 +33,165 @@ export default async function SearchPage({ searchParams }: Props) {
     error = err instanceof Error ? err.message : "Filtros inválidos";
   }
 
-  return (
-    <section className="space-y-6">
-      <h1 className="text-2xl font-bold">Buscar alojamientos</h1>
+  const activeFilters = Object.entries(filters).filter(([, v]) => v).length;
 
-      <form className="grid grid-cols-1 gap-3 rounded border p-4 sm:grid-cols-6">
-        <input
-          name="q"
-          placeholder="Ubicación, título o palabra clave"
-          defaultValue={filters.q}
-          className="rounded border px-3 py-2 sm:col-span-3"
-        />
-        <input
-          name="checkIn"
-          type="date"
-          defaultValue={filters.checkIn}
-          className="rounded border px-3 py-2"
-        />
-        <input
-          name="checkOut"
-          type="date"
-          defaultValue={filters.checkOut}
-          className="rounded border px-3 py-2"
-        />
-        <button
-          type="submit"
-          className="rounded bg-brand px-4 py-2 text-white hover:bg-brand-dark"
-        >
-          Buscar
-        </button>
-        <input
-          name="minPrice"
-          type="number"
-          placeholder="Precio mín."
-          defaultValue={filters.minPrice}
-          className="rounded border px-3 py-2 sm:col-span-2"
-        />
-        <input
-          name="maxPrice"
-          type="number"
-          placeholder="Precio máx."
-          defaultValue={filters.maxPrice}
-          className="rounded border px-3 py-2 sm:col-span-2"
-        />
-        <input
-          name="minCapacity"
-          type="number"
-          placeholder="Capacidad mín."
-          defaultValue={filters.minCapacity}
-          className="rounded border px-3 py-2 sm:col-span-2"
-        />
-      </form>
+  return (
+    <Container size="wide" className="py-14">
+      <div className="mb-10 flex items-end justify-between gap-4">
+        <div className="space-y-2">
+          <SectionLabel serial="§B">Catálogo</SectionLabel>
+          <h1 className="font-display text-5xl leading-tight tracking-tight sm:text-6xl">
+            {filters.q ? (
+              <>
+                Resultados en <em className="italic text-terracotta">{filters.q}</em>
+              </>
+            ) : (
+              <>
+                Toda la <em className="italic text-terracotta">edición</em>.
+              </>
+            )}
+          </h1>
+          <p className="text-ink-soft">
+            <span className="num">{results.length}</span> alojamiento
+            {results.length === 1 ? "" : "s"} encontrado
+            {results.length === 1 ? "" : "s"}
+            {activeFilters > 0 && (
+              <>
+                {" · "}
+                <span className="num">{activeFilters}</span> filtro
+                {activeFilters === 1 ? "" : "s"} activo
+                {activeFilters === 1 ? "" : "s"}
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+
+      <FiltersBar filters={filters} />
 
       {error && (
-        <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <Banner tone="error" className="mt-6">
+          {error}
+        </Banner>
       )}
 
-      {results.length === 0 ? (
-        <p className="text-sm text-gray-500">
-          No encontramos alojamientos con esos filtros.
-        </p>
-      ) : (
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {results.map((s) => (
-            <li key={s.id} className="overflow-hidden rounded border hover:shadow">
-              <Link href={`/stays/${s.id}`} className="block">
-                {s.coverImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.coverImageUrl} alt={s.title} className="h-44 w-full object-cover" />
-                ) : (
-                  <div className="grid h-44 w-full place-items-center bg-gray-100 text-sm text-gray-400">
-                    Sin imagen
-                  </div>
-                )}
-                <div className="space-y-1 p-3">
-                  <h3 className="font-medium">{s.title}</h3>
-                  <p className="text-xs text-gray-500">{s.locationText}</p>
-                  <p className="text-sm">
-                    ${s.pricePerNight.toLocaleString("es-CO")} · {s.capacity} pers
-                  </p>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+      <div className="mt-10">
+        {results.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-line bg-paper p-16 text-center">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
+              Sin coincidencias
+            </p>
+            <p className="mt-3 font-display text-3xl">No encontramos nada con esos filtros.</p>
+            <p className="mt-2 text-sm text-ink-soft">
+              Intenta ampliar el rango de fechas, bajar la capacidad mínima o quitar el precio máximo.
+            </p>
+          </div>
+        ) : (
+          <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {results.map((s, i) => (
+              <li key={s.id}>
+                <StayCard stay={s} index={i} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Container>
+  );
+}
+
+function FiltersBar({
+  filters,
+}: {
+  filters: {
+    q?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    minCapacity?: string;
+    checkIn?: string;
+    checkOut?: string;
+  };
+}) {
+  return (
+    <form className="grid grid-cols-1 gap-3 rounded-2xl border border-line bg-paper p-5 shadow-soft sm:grid-cols-12">
+      <FilterInput
+        name="q"
+        label="Lugar o palabra clave"
+        defaultValue={filters.q}
+        placeholder="Bogotá, cabaña, centro…"
+        className="sm:col-span-4"
+      />
+      <FilterInput
+        name="checkIn"
+        type="date"
+        label="Llegada"
+        defaultValue={filters.checkIn}
+        className="sm:col-span-2"
+      />
+      <FilterInput
+        name="checkOut"
+        type="date"
+        label="Salida"
+        defaultValue={filters.checkOut}
+        className="sm:col-span-2"
+      />
+      <FilterInput
+        name="minCapacity"
+        type="number"
+        label="Personas mín."
+        defaultValue={filters.minCapacity}
+        className="sm:col-span-1"
+      />
+      <FilterInput
+        name="minPrice"
+        type="number"
+        label="Precio mín."
+        defaultValue={filters.minPrice}
+        className="sm:col-span-1"
+      />
+      <FilterInput
+        name="maxPrice"
+        type="number"
+        label="Precio máx."
+        defaultValue={filters.maxPrice}
+        className="sm:col-span-1"
+      />
+      <div className="flex items-end sm:col-span-1">
+        <Button type="submit" size="md" className="w-full">
+          Buscar
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function FilterInput({
+  name,
+  label,
+  type = "text",
+  defaultValue,
+  placeholder,
+  className = "",
+}: {
+  name: string;
+  label: string;
+  type?: string;
+  defaultValue?: string;
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+        {label}
+      </span>
+      <input
+        type={type}
+        name={name}
+        defaultValue={defaultValue}
+        placeholder={placeholder}
+        className="mt-1 h-10 w-full rounded-md border border-line bg-bone px-3 text-sm text-ink placeholder:text-ink-mute focus:border-ink focus:bg-paper"
+      />
+    </label>
   );
 }

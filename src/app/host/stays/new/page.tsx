@@ -6,17 +6,17 @@ import {
   createStayAction,
   type ActionState,
 } from "@/app/host/stays/actions";
+import { Container, SectionLabel } from "@/components/ui/Container";
+import { Banner } from "@/components/ui/Banner";
+import { Button } from "@/components/ui/Button";
+import { Field, TextareaField } from "@/components/ui/Field";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded bg-brand px-4 py-2 text-white hover:bg-brand-dark disabled:opacity-60"
-    >
-      {pending ? "Publicando…" : "Publicar"}
-    </button>
+    <Button type="submit" size="lg" disabled={pending}>
+      {pending ? "Publicando…" : "Publicar alojamiento"}
+    </Button>
   );
 }
 
@@ -27,58 +27,86 @@ export default function NewStayPage() {
   );
 
   return (
-    <section className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">Publicar alojamiento</h1>
-      {state?.error && (
-        <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
-      )}
-      <form action={formAction} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field name="title" label="Título" required />
-        <Field name="locationText" label="Ubicación (texto)" required />
-        <Field name="pricePerNight" label="Precio por noche (COP)" type="number" min={1000} required />
-        <Field name="capacity" label="Capacidad (personas)" type="number" min={1} required />
-        <Field name="lat" label="Latitud" type="number" step="any" defaultValue="4.6097" required />
-        <Field name="lng" label="Longitud" type="number" step="any" defaultValue="-74.0817" required />
-        <div className="sm:col-span-2">
-          <label className="block text-sm font-medium">Descripción</label>
-          <textarea
-            name="description"
+    <Container size="default" className="py-14">
+      <header className="mb-10 space-y-3">
+        <SectionLabel serial="§D·01">Publicación</SectionLabel>
+        <h1 className="font-display text-5xl leading-tight">
+          Publica tu <em className="italic text-terracotta">alojamiento</em>.
+        </h1>
+        <p className="max-w-prose text-ink-soft">
+          Empieza con los datos básicos. Podrás añadir fotos y definir disponibilidad
+          en cuanto el alojamiento esté creado.
+        </p>
+      </header>
+
+      <form
+        action={formAction}
+        className="space-y-6 rounded-2xl border border-line bg-paper p-7 shadow-soft"
+      >
+        {state?.error && <Banner tone="error">{state.error}</Banner>}
+
+        <Field label="Título" name="title" required placeholder="Cabaña con vista al cerro" />
+
+        <TextareaField
+          label="Descripción"
+          name="description"
+          required
+          minLength={20}
+          rows={6}
+          placeholder="Cuenta brevemente cómo es el lugar, qué hay alrededor, qué incluye…"
+          hint="Mínimo 20 caracteres. Sé concreto: la primera frase es lo que aparece en el catálogo."
+        />
+
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <Field
+            label="Precio por noche (COP)"
+            name="pricePerNight"
+            type="number"
+            min={1000}
             required
-            minLength={20}
-            rows={5}
-            className="mt-1 w-full rounded border px-3 py-2"
+            defaultValue={120000}
           />
-          <p className="mt-1 text-xs text-gray-500">Mínimo 20 caracteres.</p>
+          <Field
+            label="Capacidad (personas)"
+            name="capacity"
+            type="number"
+            min={1}
+            required
+            defaultValue={2}
+          />
         </div>
-        <div className="sm:col-span-2">
+
+        <Field
+          label="Ubicación (texto visible)"
+          name="locationText"
+          required
+          defaultValue="Bogotá, Colombia"
+        />
+
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <Field
+            label="Latitud"
+            name="lat"
+            type="number"
+            step="any"
+            required
+            defaultValue="4.6097"
+            hint="Coordenadas usadas para búsqueda por mapa."
+          />
+          <Field
+            label="Longitud"
+            name="lng"
+            type="number"
+            step="any"
+            required
+            defaultValue="-74.0817"
+          />
+        </div>
+
+        <div className="flex items-center justify-end border-t border-line pt-5">
           <SubmitButton />
         </div>
       </form>
-    </section>
-  );
-}
-
-function Field(props: {
-  name: string;
-  label: string;
-  type?: string;
-  required?: boolean;
-  defaultValue?: string | number;
-  min?: number;
-  step?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium">{props.label}</label>
-      <input
-        name={props.name}
-        type={props.type ?? "text"}
-        required={props.required}
-        defaultValue={props.defaultValue}
-        min={props.min}
-        step={props.step}
-        className="mt-1 w-full rounded border px-3 py-2"
-      />
-    </div>
+    </Container>
   );
 }

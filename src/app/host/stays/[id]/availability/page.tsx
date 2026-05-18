@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSession } from "@/shared/require-auth";
 import { staysDeps } from "@/modules/stays/composition";
+import { Container, SectionLabel } from "@/components/ui/Container";
 import { AvailabilityForm } from "./availability-form";
 
 type Props = { params: Promise<{ id: string }> };
@@ -23,38 +24,83 @@ export default async function AvailabilityPage({ params }: Props) {
   const booked = range.filter((a) => a.status === "BOOKED");
 
   return (
-    <section className="space-y-8">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Disponibilidad</h1>
-        <Link href={`/host/stays/${id}/edit`} className="text-sm text-brand hover:underline">
-          ← Volver al alojamiento
-        </Link>
+    <Container size="wide" className="py-14">
+      <Link
+        href={`/host/stays/${id}/edit`}
+        className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink"
+      >
+        ← Volver al alojamiento
+      </Link>
+
+      <header className="mb-10 space-y-3">
+        <SectionLabel serial="§E·02">Calendario</SectionLabel>
+        <h1 className="font-display text-5xl leading-tight">{stay.title}</h1>
+        <p className="text-ink-soft">
+          Bloquea o libera rangos de fechas. Las fechas con reserva activa no se
+          pueden tocar — primero hay que cancelar la reserva.
+        </p>
       </header>
 
-      <AvailabilityForm stayId={id} />
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+        <section className="lg:col-span-7">
+          <div className="rounded-2xl border border-line bg-paper p-7 shadow-soft">
+            <AvailabilityForm stayId={id} />
+          </div>
+        </section>
 
-      <section className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <div>
-          <h2 className="mb-2 font-semibold">Fechas bloqueadas ({blocked.length})</h2>
-          <DateList dates={blocked.map((a) => a.date)} />
-        </div>
-        <div>
-          <h2 className="mb-2 font-semibold">Fechas reservadas ({booked.length})</h2>
-          <DateList dates={booked.map((a) => a.date)} />
-        </div>
-      </section>
-    </section>
+        <aside className="space-y-6 lg:col-span-5">
+          <DateGroup
+            title="Reservadas"
+            count={booked.length}
+            tone="moss"
+            dates={booked.map((a) => a.date)}
+          />
+          <DateGroup
+            title="Bloqueadas por ti"
+            count={blocked.length}
+            tone="ochre"
+            dates={blocked.map((a) => a.date)}
+          />
+        </aside>
+      </div>
+    </Container>
   );
 }
 
-function DateList({ dates }: { dates: Date[] }) {
-  if (dates.length === 0) return <p className="text-sm text-gray-500">Ninguna.</p>;
+function DateGroup({
+  title,
+  count,
+  tone,
+  dates,
+}: {
+  title: string;
+  count: number;
+  tone: "moss" | "ochre";
+  dates: Date[];
+}) {
   const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium" });
+  const colorRing = tone === "moss" ? "border-moss/30 bg-moss/[0.04]" : "border-ochre/40 bg-ochre/[0.06]";
+  const dot = tone === "moss" ? "bg-moss" : "bg-ochre";
   return (
-    <ul className="space-y-1 text-sm">
-      {dates.map((d, i) => (
-        <li key={i} className="rounded bg-gray-50 px-2 py-1">{fmt.format(d)}</li>
-      ))}
-    </ul>
+    <div className={`rounded-2xl border p-6 ${colorRing}`}>
+      <div className="flex items-center justify-between">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+          {title}
+        </p>
+        <span className="num text-xl">{count}</span>
+      </div>
+      {dates.length === 0 ? (
+        <p className="mt-3 text-sm text-ink-mute">Ninguna.</p>
+      ) : (
+        <ul className="mt-4 space-y-1.5">
+          {dates.map((d, i) => (
+            <li key={i} className="flex items-center gap-2 text-sm">
+              <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+              <span className="num text-ink">{fmt.format(d)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

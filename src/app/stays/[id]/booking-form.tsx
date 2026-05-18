@@ -1,23 +1,31 @@
 "use client";
 
-import { useActionState } from "react";
+import Link from "next/link";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   createBookingAction,
   type BookingActionState,
 } from "@/app/bookings/actions";
+import { Button } from "@/components/ui/Button";
+import { Banner } from "@/components/ui/Banner";
 
-function SubmitButton({ disabled }: { disabled: boolean }) {
+function SubmitButton({ totalLabel }: { totalLabel: string | null }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={disabled || pending}
-      className="w-full rounded bg-brand px-4 py-2 text-white hover:bg-brand-dark disabled:opacity-60"
-    >
-      {pending ? "Reservando…" : "Reservar"}
-    </button>
+    <Button type="submit" size="lg" disabled={pending} className="w-full">
+      {pending ? "Reservando…" : totalLabel ? `Reservar · ${totalLabel}` : "Reservar"}
+    </Button>
   );
+}
+
+function nightsBetween(checkIn: string, checkOut: string): number {
+  if (!checkIn || !checkOut) return 0;
+  const a = new Date(checkIn);
+  const b = new Date(checkOut);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return 0;
+  const diff = Math.round((b.getTime() - a.getTime()) / 86_400_000);
+  return diff > 0 ? diff : 0;
 }
 
 export function BookingForm({
@@ -30,51 +38,75 @@ export function BookingForm({
   isAuthed: boolean;
 }) {
   const action = createBookingAction.bind(null, stayId);
-  const [state, formAction] = useActionState<BookingActionState, FormData>(
-    action,
-    null
-  );
+  const [state, formAction] = useActionState<BookingActionState, FormData>(action, null);
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
 
   if (!isAuthed) {
     return (
-      <a
-        href={`/login`}
-        className="block w-full rounded bg-brand px-4 py-2 text-center text-white hover:bg-brand-dark"
+      <Link
+        href="/login"
+        className="inline-flex h-12 w-full items-center justify-center rounded-lg bg-ink px-6 text-sm font-medium text-paper transition-colors hover:bg-ink-soft"
       >
         Inicia sesión para reservar
-      </a>
+      </Link>
     );
   }
 
+  const nights = nightsBetween(checkIn, checkOut);
+  const total = nights > 0 ? nights * pricePerNight : null;
+  const totalLabel = total ? `$${total.toLocaleString("es-CO")}` : null;
+
   return (
-    <form action={formAction} className="space-y-3">
-      {state?.error && (
-        <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
-      )}
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="block text-xs font-medium">Check-in</label>
+    <form action={formAction} className="space-y-4">
+      {state?.error && <Banner tone="error">{state.error}</Banner>}
+
+      <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-line">
+        <label className="block border-r border-line p-3">
+          <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+            Llegada
+          </span>
           <input
             type="date"
             name="checkIn"
             required
-            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            value={checkIn}
+            onChange={(e) => setCheckIn(e.target.value)}
+            className="mt-1 w-full bg-transparent text-sm text-ink focus:outline-none"
           />
-        </div>
-        <div>
-          <label className="block text-xs font-medium">Check-out</label>
+        </label>
+        <label className="block p-3">
+          <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+            Salida
+          </span>
           <input
             type="date"
             name="checkOut"
             required
-            className="mt-1 w-full rounded border px-2 py-1 text-sm"
+            value={checkOut}
+            onChange={(e) => setCheckOut(e.target.value)}
+            className="mt-1 w-full bg-transparent text-sm text-ink focus:outline-none"
           />
-        </div>
+        </label>
       </div>
-      <p className="text-xs text-gray-500">
-        Precio por noche: ${pricePerNight.toLocaleString("es-CO")}
-      </p>
-      <SubmitButton disabled={false} />
+
+      {nights > 0 && (
+        <div className="space-y-1 rounded-lg bg-bone-2/50 p-3 text-sm">
+          <div className="flex justify-between text-ink-soft">
+            <span>
+              <span className="num">${pricePerNight.toLocaleString("es-CO")}</span> ×{" "}
+              <span className="num">{nights}</span> noche{nights === 1 ? "" : "s"}
+            </span>
+            <span className="num">${(pricePerNight * nights).toLocaleString("es-CO")}</span>
+          </div>
+          <div className="flex justify-between border-t border-line pt-2 font-medium text-ink">
+            <span>Total</span>
+            <span className="num">${(pricePerNight * nights).toLocaleString("es-CO")}</span>
+          </div>
+        </div>
+      )}
+
+      <SubmitButton totalLabel={totalLabel} />
     </form>
   );
 }

@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { staysDeps } from "@/modules/stays/composition";
 import { prisma } from "@/shared/db";
 import { auth } from "@/shared/auth";
+import { Container, SectionLabel } from "@/components/ui/Container";
+import { Badge } from "@/components/ui/Badge";
 import { BookingForm } from "./booking-form";
 
 type Props = { params: Promise<{ id: string }> };
@@ -16,7 +18,7 @@ export default async function StayDetailPage({ params }: Props) {
 
   const host = await prisma.user.findUnique({
     where: { id: stay.hostId },
-    select: { id: true, name: true, photoUrl: true },
+    select: { id: true, name: true, photoUrl: true, createdAt: true },
   });
 
   const avg = await prisma.review.aggregate({
@@ -25,68 +27,168 @@ export default async function StayDetailPage({ params }: Props) {
     _count: { _all: true },
   });
 
+  const memberSince = host
+    ? new Intl.DateTimeFormat("es-CO", { year: "numeric" }).format(host.createdAt)
+    : null;
+
+  const serial = String(stay.id).slice(-4).toUpperCase();
+
   return (
-    <article className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold">{stay.title}</h1>
-        <p className="text-sm text-gray-600">{stay.locationText}</p>
-        <p className="text-sm">
+    <Container size="wide" className="py-12">
+      <Link
+        href="/search"
+        className="mb-8 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink"
+      >
+        ← Volver al catálogo
+      </Link>
+
+      <header className="mb-10 grid grid-cols-1 items-end gap-6 lg:grid-cols-12">
+        <div className="space-y-3 lg:col-span-8">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-ink-soft">
+            <span className="text-terracotta">№ {serial}</span>
+            <span className="mx-2 text-line">/</span>
+            {stay.locationText}
+          </p>
+          <h1 className="font-display text-5xl leading-[0.95] tracking-tight sm:text-7xl">
+            {stay.title}
+          </h1>
+        </div>
+        <div className="space-y-2 lg:col-span-4 lg:text-right">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+            Calificación
+          </p>
           {avg._count._all > 0 ? (
-            <>
-              <strong>{Number(avg._avg.rating).toFixed(1)}</strong> / 5 ·{" "}
-              {avg._count._all} reseña(s)
-            </>
+            <p className="font-display text-4xl">
+              <span className="num">{Number(avg._avg.rating).toFixed(1)}</span>
+              <span className="ml-1 text-base text-ink-mute">/ 5</span>
+              <span className="ml-3 align-middle font-mono text-xs text-ink-mute">
+                ({avg._count._all} reseñas)
+              </span>
+            </p>
           ) : (
-            <span className="text-gray-500">Sin calificaciones aún</span>
+            <p className="font-display text-2xl italic text-ink-soft">Sin calificaciones aún</p>
           )}
-        </p>
+        </div>
       </header>
 
-      {stay.images.length > 0 && (
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {stay.images.map((img) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={img.id}
-              src={img.url}
-              alt=""
-              className="h-56 w-full rounded object-cover"
-            />
-          ))}
-        </div>
-      )}
+      {stay.images.length > 0 && <Gallery images={stay.images.map((i) => i.url)} title={stay.title} />}
 
-      <section className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-        <div className="sm:col-span-2 space-y-4">
-          <h2 className="text-xl font-semibold">Sobre este lugar</h2>
-          <p className="whitespace-pre-line text-gray-800">{stay.description}</p>
-          <p className="text-sm text-gray-600">
-            Capacidad: <strong>{stay.capacity}</strong> personas
-          </p>
-        </div>
-        <aside className="space-y-3 rounded border p-4">
-          <p className="text-2xl font-bold">
-            ${stay.pricePerNight.toLocaleString("es-CO")}{" "}
-            <span className="text-sm font-normal text-gray-500">/ noche</span>
-          </p>
-          <BookingForm
-            stayId={stay.id}
-            pricePerNight={stay.pricePerNight}
-            isAuthed={!!session?.user?.id}
-          />
+      <section className="mt-16 grid grid-cols-1 gap-12 lg:grid-cols-12">
+        <article className="space-y-10 lg:col-span-7">
+          <div className="space-y-4">
+            <SectionLabel serial="§01">Acerca del lugar</SectionLabel>
+            <p className="font-display text-2xl leading-snug text-ink first-letter:float-left first-letter:mr-2 first-letter:text-6xl first-letter:font-medium first-letter:leading-none first-letter:text-terracotta">
+              {stay.description}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 border-y border-line py-6">
+            <Spec label="Capacidad" value={`${stay.capacity}`} unit="personas" />
+            <Spec label="Coordenadas" value={`${stay.lat.toFixed(2)}, ${stay.lng.toFixed(2)}`} mono />
+            <Spec label="Estado" value="Activo" />
+          </div>
+
           {host && (
-            <p className="pt-2 text-sm">
-              Anfitrión:{" "}
+            <div className="space-y-4">
+              <SectionLabel serial="§02">Quien recibe</SectionLabel>
               <Link
                 href={`/hosts/${host.id}`}
-                className="text-brand hover:underline"
+                className="flex items-center gap-4 rounded-xl border border-line bg-paper p-4 transition-colors hover:border-ink/30"
               >
-                {host.name}
+                {host.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={host.photoUrl}
+                    alt={host.name}
+                    className="h-14 w-14 rounded-full border border-line object-cover"
+                  />
+                ) : (
+                  <div className="grid h-14 w-14 place-items-center rounded-full bg-bone-2 font-display text-xl text-ink-soft">
+                    {host.name[0]?.toUpperCase()}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <p className="font-display text-xl">{host.name}</p>
+                  <p className="text-sm text-ink-soft">
+                    Recibiendo huéspedes desde <span className="num">{memberSince}</span>
+                  </p>
+                </div>
+                <span className="text-sm text-terracotta">Ver perfil →</span>
               </Link>
-            </p>
+            </div>
           )}
+        </article>
+
+        <aside className="lg:col-span-5">
+          <div className="sticky top-24 space-y-5 rounded-2xl border border-line bg-paper p-7 shadow-soft">
+            <div className="flex items-baseline justify-between border-b border-line pb-4">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+                  Tarifa por noche
+                </p>
+                <p className="num font-display text-4xl text-ink">
+                  ${stay.pricePerNight.toLocaleString("es-CO")}
+                </p>
+              </div>
+              <Badge tone="moss">Disponible</Badge>
+            </div>
+            <BookingForm
+              stayId={stay.id}
+              pricePerNight={stay.pricePerNight}
+              isAuthed={!!session?.user?.id}
+            />
+            <p className="text-xs text-ink-mute">
+              La reserva se confirma al instante. Las fechas se bloquean en el
+              calendario del anfitrión.
+            </p>
+          </div>
         </aside>
       </section>
-    </article>
+    </Container>
+  );
+}
+
+function Spec({
+  label,
+  value,
+  unit,
+  mono,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">{label}</p>
+      <p className={`${mono ? "num" : "font-display"} text-lg text-ink`}>
+        {value}
+        {unit && <span className="ml-1 text-xs text-ink-mute">{unit}</span>}
+      </p>
+    </div>
+  );
+}
+
+function Gallery({ images, title }: { images: string[]; title: string }) {
+  const [hero, ...rest] = images;
+  return (
+    <div className="grid grid-cols-1 gap-2 overflow-hidden rounded-xl sm:grid-cols-4 sm:grid-rows-2 sm:[&>*:first-child]:col-span-2 sm:[&>*:first-child]:row-span-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={hero}
+        alt={title}
+        className="aspect-[4/3] w-full object-cover sm:aspect-auto sm:h-full"
+      />
+      {rest.slice(0, 4).map((url, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={i}
+          src={url}
+          alt=""
+          className="hidden h-full w-full object-cover sm:block"
+        />
+      ))}
+    </div>
   );
 }

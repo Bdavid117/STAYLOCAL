@@ -6,17 +6,16 @@ import {
   manageAvailabilityAction,
   type ActionState,
 } from "@/app/host/stays/actions";
+import { Banner } from "@/components/ui/Banner";
+import { Button } from "@/components/ui/Button";
+import { SelectField } from "@/components/ui/Field";
 
-function SubmitButton({ label }: { label: string }) {
+function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded border px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
-    >
-      {pending ? "Aplicando…" : label}
-    </button>
+    <Button type="submit" size="md" disabled={pending} className="w-full">
+      {pending ? "Aplicando…" : "Aplicar al calendario"}
+    </Button>
   );
 }
 
@@ -25,43 +24,45 @@ export function AvailabilityForm({ stayId }: { stayId: string }) {
   const [state, formAction] = useActionState<ActionState, FormData>(action, null);
 
   return (
-    <form action={formAction} className="space-y-3">
-      {state?.ok && (
-        <p className="rounded bg-green-50 px-3 py-2 text-sm text-green-700">
-          Calendario actualizado.
-        </p>
-      )}
-      {state?.error && (
-        <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
-      )}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div>
-          <label className="block text-sm font-medium">Desde</label>
+    <form action={formAction} className="space-y-5">
+      {state?.ok && <Banner tone="success">Calendario actualizado.</Banner>}
+      {state?.error && <Banner tone="error">{state.error}</Banner>}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <label className="block">
+          <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+            Desde
+          </span>
           <input
             type="date"
             name="from"
             required
-            className="mt-1 w-full rounded border px-3 py-2"
+            className="mt-1 h-11 w-full rounded-lg border border-line bg-paper px-3 text-sm text-ink focus:border-ink focus:bg-bone"
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium">Hasta (no incluido)</label>
+        </label>
+        <label className="block">
+          <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+            Hasta (no incluido)
+          </span>
           <input
             type="date"
             name="to"
             required
-            className="mt-1 w-full rounded border px-3 py-2"
+            className="mt-1 h-11 w-full rounded-lg border border-line bg-paper px-3 text-sm text-ink focus:border-ink focus:bg-bone"
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium">Acción</label>
-          <select name="action" defaultValue="block" className="mt-1 w-full rounded border px-3 py-2">
-            <option value="block">Bloquear</option>
-            <option value="unblock">Desbloquear</option>
-          </select>
-        </div>
+        </label>
+        <SelectField label="Acción" name="action" defaultValue="block">
+          <option value="block">Bloquear</option>
+          <option value="unblock">Desbloquear</option>
+        </SelectField>
       </div>
-      <SubmitButton label="Aplicar" />
+
+      <p className="text-xs text-ink-mute">
+        Bloquear evita que se reserve. Desbloquear solo afecta fechas que tú
+        bloqueaste — no toca reservas activas.
+      </p>
+
+      <SubmitButton />
     </form>
   );
 }

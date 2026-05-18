@@ -9,9 +9,9 @@ export function LogoutButton() {
     <form action={logout}>
       <button
         type="submit"
-        className="rounded border px-3 py-1 text-sm hover:bg-gray-50"
+        className="inline-flex h-9 items-center rounded-md border border-line bg-paper px-3 text-sm text-ink-soft transition-colors hover:border-ink/30 hover:text-ink"
       >
-        Cerrar sesión
+        Salir
       </button>
     </form>
   );
