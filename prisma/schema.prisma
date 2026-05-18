@@ -62,10 +62,26 @@ model User {
   photoUrl     String?
   createdAt    DateTime @default(now())
 
-  stays         Stay[]
-  bookings      Booking[]
-  reviews       Review[]
-  notifications Notification[]
+  stays              Stay[]
+  bookings           Booking[]
+  reviews            Review[]
+  notifications      Notification[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+// Tokens de recuperación de contraseña (CU-03). El token crudo se envía por
+// correo; en la DB solo se guarda su hash para que un dump no permita
+// suplantar usuarios.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // ILF-02
