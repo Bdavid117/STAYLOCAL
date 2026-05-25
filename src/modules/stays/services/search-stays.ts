@@ -97,9 +97,9 @@ export async function searchStays(
       ...(f.q
         ? {
             OR: [
-              { title: { contains: f.q, mode: "insensitive" } },
-              { description: { contains: f.q, mode: "insensitive" } },
-              { locationText: { contains: f.q, mode: "insensitive" } },
+              { title: { contains: f.q } },
+              { description: { contains: f.q } },
+              { locationText: { contains: f.q } },
             ],
           }
         : {}),

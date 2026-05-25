@@ -21,9 +21,25 @@ La estimación formal del proyecto (Puntos de Función, conversión a LOC y mode
 
 - Node.js ≥ 20
 - pnpm ≥ 9
-- Docker (para Postgres + MailHog locales)
 
-## Setup
+## Setup (desarrollo sin Docker — SQLite)
+
+```bash
+# 1. Copiar variables de entorno
+cp .env.example .env
+
+# 2. Instalar dependencias del proyecto
+pnpm install
+
+# 3. Migrar la base de datos y sembrar datos demo
+pnpm db:migrate
+pnpm db:seed
+
+# 4. Iniciar el servidor de desarrollo
+pnpm dev
+```
+
+## Setup (con PostgreSQL + MailHog — requiere Docker)
 
 ```bash
 # 1. Copiar variables de entorno
@@ -35,11 +51,14 @@ docker compose up -d
 # 3. Instalar dependencias del proyecto
 pnpm install
 
-# 4. Migrar la base de datos y sembrar datos demo
+# 4. Cambiar a PostgreSQL
+pnpm db:postgresql
+
+# 5. Migrar la base de datos y sembrar datos demo
 pnpm db:migrate
 pnpm db:seed
 
-# 5. Iniciar el servidor de desarrollo
+# 6. Iniciar el servidor de desarrollo
 pnpm dev
 ```
 
@@ -64,6 +83,8 @@ Usuarios de demo (sembrados por `prisma/seed.ts`):
 | `pnpm db:migrate` | Crea/aplica migraciones Prisma |
 | `pnpm db:seed` | Carga datos demo |
 | `pnpm db:studio` | Prisma Studio (UI de la DB) |
+| `pnpm db:sqlite` | Cambiar a SQLite (desarrollo sin Docker) |
+| `pnpm db:postgresql` | Cambiar a PostgreSQL (requiere Docker) |
 
 ## Arquitectura
 

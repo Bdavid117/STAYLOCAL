@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { staysDeps } from "@/modules/stays/composition";
 import { reviewsDeps } from "@/modules/reviews/composition";

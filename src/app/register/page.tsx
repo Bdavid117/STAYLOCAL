@@ -33,11 +33,3 @@ export default function RegisterPage() {
   );
 }
 
-function Bullet({ children }: { children: React.ReactNode }) {
-  return (
-    <li className="flex gap-3">
-      <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-terracotta" />
-      <span>{children}</span>
-    </li>
-  );
-}
