@@ -1,46 +1,18 @@
 import type { Metadata } from "next";
-import { Fraunces, DM_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Header } from "./header";
-import { Container } from "@/components/ui/Container";
-import { Logo } from "@/components/ui/Logo";
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-display",
-  axes: ["opsz", "SOFT"],
-  display: "swap",
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  weight: ["400", "500", "700"],
-  display: "swap",
-});
-
-const mono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-  weight: ["400", "500"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
-  title: "StayLocal — Quédate donde la gente vive",
-  description:
-    "Plataforma colombiana de alojamiento turístico local. Encuentra cuartos, casas y cabañas publicadas por anfitriones del barrio.",
+  title: "StayLocal - The Informed Local",
+  description: "Find stays inspired by the informed local.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="es"
-      className={`${fraunces.variable} ${dmSans.variable} ${mono.variable}`}
-    >
-      <body className="min-h-screen">
+    <html lang="es">
+      <body className="min-h-screen flex flex-col font-body-md text-body-md bg-bone text-ink">
         <Header />
-        <main>{children}</main>
+        <main className="flex-grow">{children}</main>
         <SiteFooter />
       </body>
     </html>
@@ -49,39 +21,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 function SiteFooter() {
   return (
-    <footer className="mt-24 border-t border-line bg-bone">
-      <Container size="wide" className="py-12">
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-3">
-          <div className="space-y-3">
-            <Logo />
-            <p className="max-w-prose text-sm text-ink-soft">
-              Editorial de alojamiento turístico local. Publicado en Bogotá,
-              Colombia, como proyecto académico de Ingeniería de Software I.
-            </p>
-          </div>
-          <div className="space-y-2 text-sm">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
-              Explorar
-            </p>
-            <ul className="space-y-1.5">
-              <li><a href="/search" className="text-ink-soft hover:text-ink">Buscar alojamientos</a></li>
-              <li><a href="/host/stays/new" className="text-ink-soft hover:text-ink">Publicar el tuyo</a></li>
-              <li><a href="/login" className="text-ink-soft hover:text-ink">Iniciar sesión</a></li>
-            </ul>
-          </div>
-          <div className="space-y-2 text-sm">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
-              Colofón
-            </p>
-            <p className="text-ink-soft">
-              Universidad Nacional de Colombia · 2026
-            </p>
-            <p className="text-ink-mute">
-              Compuesto con Fraunces, DM Sans e IBM Plex Mono.
-            </p>
-          </div>
+    <footer className="bg-bone-2 dark:bg-surface-container-low w-full py-stack-lg border-t border-line dark:border-outline-variant">
+      <div className="max-w-container-max mx-auto px-gutter grid grid-cols-1 md:grid-cols-2 gap-stack-md items-center">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-8">
+          <span className="font-headline-md text-headline-md text-ink dark:text-on-surface">StayLocal</span>
+          <span className="font-body-sm text-body-sm text-ink-soft dark:text-on-surface-variant text-center md:text-left mt-2 md:mt-1">© 2026 StayLocal. Inspired by the informed local.</span>
         </div>
-      </Container>
+        <div className="flex flex-wrap justify-center md:justify-end gap-6">
+          <a className="font-label-caps text-label-caps text-ink-soft dark:text-on-surface-variant hover:text-terracotta dark:hover:text-primary-fixed-dim underline transition-all" href="#">Privacy</a>
+          <a className="font-label-caps text-label-caps text-ink-soft dark:text-on-surface-variant hover:text-terracotta dark:hover:text-primary-fixed-dim underline transition-all" href="#">Terms</a>
+          <a className="font-label-caps text-label-caps text-ink-soft dark:text-on-surface-variant hover:text-terracotta dark:hover:text-primary-fixed-dim underline transition-all" href="#">Sitemap</a>
+          <a className="font-label-caps text-label-caps text-ink-soft dark:text-on-surface-variant hover:text-terracotta dark:hover:text-primary-fixed-dim underline transition-all" href="#">Company</a>
+          <a className="font-label-caps text-label-caps text-ink-soft dark:text-on-surface-variant hover:text-terracotta dark:hover:text-primary-fixed-dim underline transition-all" href="#">Destinations</a>
+        </div>
+      </div>
     </footer>
   );
 }
