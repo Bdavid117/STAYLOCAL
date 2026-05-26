@@ -66,10 +66,13 @@ App: <http://localhost:3000> · MailHog UI: <http://localhost:8025> · Prisma St
 
 Usuarios de demo (sembrados por `prisma/seed.ts`):
 
-| Rol | Email | Contraseña |
-|---|---|---|
-| Anfitrión | `host@staylocal.local` | `password123` |
-| Turista | `guest@staylocal.local` | `password123` |
+| Rol | Email | Contraseña | Nombre |
+|---|---|---|---|
+| Anfitrión | `host@staylocal.local` | `password123` | Carlos Mendoza |
+| Anfitrión | `anahi@staylocal.local` | `password123` | Ana Hernández |
+| Turista | `guest@staylocal.local` | `password123` | María García |
+| Turista | `juan.perez@email.com` | `password123` | Juan Pérez |
+| Turista | `laura.rodriguez@email.com` | `password123` | Laura Rodríguez |
 
 ## Scripts
 
