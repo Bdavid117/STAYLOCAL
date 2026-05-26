@@ -19,8 +19,9 @@ test-results
 public/uploads/*
 !public/uploads/.gitkeep
 
-prisma/dev.db
-prisma/dev.db-journal
+prisma/*.db
+prisma/*.db-journal
+prisma/migrations/*.sql
 
 .playwright-mcp/
 .env.docker.local

@@ -35,7 +35,7 @@ repo/      # Prisma repositories and external adapters
 ## Stack (locked in)
 
 - **Next.js 15 App Router** as the only runtime — pages + Server Actions + Route Handlers in `src/app/`.
-- **PostgreSQL 16** via Docker (`docker-compose.yml`). No PostGIS — geo search uses plain `lat/lng` + Haversine in SQL.
+- **PostgreSQL 16** via Docker (`docker-compose.yml`) or **SQLite** for local dev without Docker. Use `pnpm db:sqlite` / `pnpm db:postgresql` to switch. No PostGIS — geo search uses plain `lat/lng` + Haversine in SQL.
 - **Prisma 6** as ORM. Models map 1:1 to the 8 ILFs.
 - **NextAuth v5** (credentials) with `@auth/prisma-adapter`. Session strategy = JWT. Entry point: `src/shared/auth.ts`.
 - **Tailwind CSS 3** for styling.
@@ -78,6 +78,9 @@ Critical schema decisions:
 | `pnpm db:migrate` | Apply Prisma migrations in dev |
 | `pnpm db:seed` | Reset demo data (`prisma/seed.ts`) |
 | `pnpm db:studio` | Prisma Studio |
+| `pnpm db:sqlite` | Switch to SQLite (no Docker needed) |
+| `pnpm db:postgresql` | Switch to PostgreSQL (requires Docker) |
+| `pnpm db:reset` | Reset database (migrations + seed) |
 | `docker compose up -d` | Start Postgres + MailHog |
 
 Update this section the moment new scripts land in `package.json` — do not let it drift.

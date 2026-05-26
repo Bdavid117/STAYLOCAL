@@ -28,12 +28,20 @@ export async function Header() {
         </div>
 
         <div className="flex items-center gap-4">
-          <button className="text-ink dark:text-on-surface-variant hover:bg-bone-2 dark:hover:bg-surface-container-high transition-colors p-2 rounded-full flex items-center justify-center">
+          <button
+            type="button"
+            aria-label="Cambiar idioma"
+            className="text-ink dark:text-on-surface-variant hover:bg-bone-2 dark:hover:bg-surface-container-high transition-colors p-2 rounded-full flex items-center justify-center"
+          >
             <span className="material-symbols-outlined">language</span>
           </button>
           
           <div className="relative group">
-            <button className="text-ink dark:text-on-surface-variant hover:bg-bone-2 dark:hover:bg-surface-container-high transition-colors p-2 rounded-full border border-line flex items-center gap-2 px-3">
+            <button
+            type="button"
+            aria-label="Abrir menú de usuario"
+            className="text-ink dark:text-on-surface-variant hover:bg-bone-2 dark:hover:bg-surface-container-high transition-colors p-2 rounded-full border border-line flex items-center gap-2 px-3"
+          >
               <span className="material-symbols-outlined">menu</span>
               <div className="w-6 h-6 rounded-full bg-bone-2 overflow-hidden flex items-center justify-center">
                 <span className="material-symbols-outlined text-sm">person</span>
