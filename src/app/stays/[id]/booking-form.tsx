@@ -3,28 +3,29 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
 import {
   createBookingAction,
   type BookingActionState,
 } from "@/app/bookings/actions";
 import { Button } from "@/components/ui/Button";
 import { Banner } from "@/components/ui/Banner";
+import { Calendar } from "@/components/ui/Calendar";
 
-function SubmitButton({ totalLabel }: { totalLabel: string | null }) {
+function SubmitButton({ totalLabel, disabled }: { totalLabel: string | null; disabled?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" size="lg" disabled={pending} className="w-full">
+    <Button type="submit" size="lg" disabled={pending || disabled} className="w-full">
       {pending ? "Reservando…" : totalLabel ? `Reservar · ${totalLabel}` : "Reservar"}
     </Button>
   );
 }
 
-function nightsBetween(checkIn: string, checkOut: string): number {
-  if (!checkIn || !checkOut) return 0;
-  const a = new Date(checkIn);
-  const b = new Date(checkOut);
-  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return 0;
-  const diff = Math.round((b.getTime() - a.getTime()) / 86_400_000);
+function nightsBetween(range: DateRange | undefined): number {
+  if (!range?.from || !range?.to) return 0;
+  const diff = Math.round((range.to.getTime() - range.from.getTime()) / 86_400_000);
   return diff > 0 ? diff : 0;
 }
 
@@ -32,15 +33,17 @@ export function BookingForm({
   stayId,
   pricePerNight,
   isAuthed,
+  bookedDates = [],
 }: {
   stayId: string;
   pricePerNight: number;
   isAuthed: boolean;
+  bookedDates?: Date[];
 }) {
   const action = createBookingAction.bind(null, stayId);
   const [state, formAction] = useActionState<BookingActionState, FormData>(action, null);
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
+  const [range, setRange] = useState<DateRange | undefined>();
+  const [showCalendar, setShowCalendar] = useState(false);
 
   if (!isAuthed) {
     return (
@@ -53,7 +56,7 @@ export function BookingForm({
     );
   }
 
-  const nights = nightsBetween(checkIn, checkOut);
+  const nights = nightsBetween(range);
   const total = nights > 0 ? nights * pricePerNight : null;
   const totalLabel = total ? `$${total.toLocaleString("es-CO")}` : null;
 
@@ -61,37 +64,66 @@ export function BookingForm({
     <form action={formAction} className="space-y-4">
       {state?.error && <Banner tone="error">{state.error}</Banner>}
 
-      <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-line">
-        <label className="block border-r border-line p-3">
-          <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-soft">
-            Llegada
+      {/* Hidden inputs for the form action */}
+      <input 
+        type="hidden" 
+        name="checkIn" 
+        value={range?.from ? format(range.from, "yyyy-MM-dd") : ""} 
+      />
+      <input 
+        type="hidden" 
+        name="checkOut" 
+        value={range?.to ? format(range.to, "yyyy-MM-dd") : ""} 
+      />
+
+      <div className="overflow-hidden rounded-xl border border-line bg-paper shadow-sm">
+        <button
+          type="button"
+          onClick={() => setShowCalendar(!showCalendar)}
+          className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-bone/50"
+        >
+          <div className="grid grid-cols-2 gap-8">
+            <div>
+              <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+                Llegada
+              </span>
+              <span className="mt-1 block text-sm font-medium text-ink">
+                {range?.from ? format(range.from, "PPP", { locale: es }) : "Seleccionar"}
+              </span>
+            </div>
+            <div>
+              <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+                Salida
+              </span>
+              <span className="mt-1 block text-sm font-medium text-ink">
+                {range?.to ? format(range.to, "PPP", { locale: es }) : "Seleccionar"}
+              </span>
+            </div>
+          </div>
+          <span className="material-symbols-outlined text-ink-soft">
+            {showCalendar ? "expand_less" : "calendar_today"}
           </span>
-          <input
-            type="date"
-            name="checkIn"
-            required
-            value={checkIn}
-            onChange={(e) => setCheckIn(e.target.value)}
-            className="mt-1 w-full bg-transparent text-sm text-ink focus:outline-none"
-          />
-        </label>
-        <label className="block p-3">
-          <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-soft">
-            Salida
-          </span>
-          <input
-            type="date"
-            name="checkOut"
-            required
-            value={checkOut}
-            onChange={(e) => setCheckOut(e.target.value)}
-            className="mt-1 w-full bg-transparent text-sm text-ink focus:outline-none"
-          />
-        </label>
+        </button>
+
+        {showCalendar && (
+          <div className="border-t border-line bg-paper p-2">
+            <Calendar
+              mode="range"
+              selected={range}
+              onSelect={setRange}
+              numberOfMonths={1}
+              disabled={[
+                { before: new Date() },
+                ...bookedDates
+              ]}
+              className="mx-auto"
+            />
+          </div>
+        )}
       </div>
 
       {nights > 0 && (
-        <div className="space-y-1 rounded-lg bg-bone-2/50 p-3 text-sm">
+        <div className="space-y-1 rounded-xl bg-bone-2/50 p-4 text-sm">
           <div className="flex justify-between text-ink-soft">
             <span>
               <span className="num">${pricePerNight.toLocaleString("es-CO")}</span> ×{" "}
@@ -106,7 +138,7 @@ export function BookingForm({
         </div>
       )}
 
-      <SubmitButton totalLabel={totalLabel} />
+      <SubmitButton totalLabel={totalLabel} disabled={!range?.from || !range?.to} />
     </form>
   );
 }

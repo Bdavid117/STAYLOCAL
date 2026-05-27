@@ -27,6 +27,15 @@ export default async function StayDetailPage({ params }: Props) {
   });
   const reviews = await listReviewsForStay(id, reviewsDeps());
 
+  const bookedDates = await prisma.availability.findMany({
+    where: {
+      stayId: id,
+      status: { in: ["BOOKED", "BLOCKED"] },
+      date: { gte: new Date() },
+    },
+    select: { date: true },
+  });
+
   const memberSince = host
     ? new Intl.DateTimeFormat("es-CO", { year: "numeric" }).format(host.createdAt)
     : null;
@@ -127,7 +136,12 @@ export default async function StayDetailPage({ params }: Props) {
                         </div>
                     )}
                 </div>
-                <BookingForm stayId={stay.id} pricePerNight={stay.pricePerNight} isAuthed={!!session?.user?.id} />
+                <BookingForm 
+                  stayId={stay.id} 
+                  pricePerNight={stay.pricePerNight} 
+                  isAuthed={!!session?.user?.id} 
+                  bookedDates={bookedDates.map(d => d.date)}
+                />
                 <p className="text-center font-body-sm text-body-sm text-ink-mute mt-6">La reserva se confirma al instante.</p>
             </div>
         </div>
