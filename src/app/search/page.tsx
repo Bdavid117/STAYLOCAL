@@ -3,7 +3,7 @@ import { auth } from "@/shared/auth";
 import { searchStays } from "@/modules/stays/services/search-stays";
 import { Container, SectionLabel } from "@/components/ui/Container";
 import { Banner } from "@/components/ui/Banner";
-import { StayCard } from "@/components/ui/StayCard";
+import { SearchResults } from "./search-results";
 import { Button } from "@/components/ui/Button";
 
 type Props = {
@@ -87,32 +87,11 @@ export default async function SearchPage({ searchParams }: Props) {
         </Banner>
       )}
 
-      <div className="mt-10">
-        {results.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-line bg-paper p-16 text-center">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-ink-mute">
-              Sin coincidencias
-            </p>
-            <p className="mt-3 font-display text-3xl">No encontramos nada con esos filtros.</p>
-            <p className="mt-2 text-sm text-ink-soft">
-              Intenta ampliar el rango de fechas, bajar la capacidad mínima o quitar el precio máximo.
-            </p>
-          </div>
-        ) : (
-          <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {results.map((s, i) => (
-              <li key={s.id}>
-                <StayCard 
-                  stay={s} 
-                  index={i} 
-                  isFavorite={favoriteIds.has(s.id)}
-                  showFavoriteButton={!!session?.user?.id}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <SearchResults 
+        results={results} 
+        favoriteIds={favoriteIds} 
+        showFavoriteButton={!!session?.user?.id} 
+      />
     </Container>
   );
 }
