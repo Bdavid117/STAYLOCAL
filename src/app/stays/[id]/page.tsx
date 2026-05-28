@@ -5,6 +5,7 @@ import { listReviewsForStay } from "@/modules/reviews/services/list-reviews";
 import { prisma } from "@/shared/db";
 import { auth } from "@/shared/auth";
 import { BookingForm } from "./booking-form";
+import { Stars } from "@/components/ui/Stars";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -53,10 +54,12 @@ export default async function StayDetailPage({ params }: Props) {
           <div className="mb-8 border-b border-line pb-8">
               <h1 className="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-ink mb-2">{stay.title}</h1>
               <div className="flex items-center gap-4 text-ink-soft mb-4">
-                  <span className="flex items-center gap-1 font-body-sm text-body-sm">
-                      <span className="material-symbols-outlined text-[16px] text-terracotta fill">star</span>
-                      {avg._count._all > 0 ? `${Number(avg._avg.rating).toFixed(1)} (${avg._count._all} reseñas)` : 'Sin calificaciones'}
-                  </span>
+                  <Stars 
+                    rating={Number(avg._avg.rating || 0)} 
+                    count={avg._count._all} 
+                    showNumber 
+                    size="sm" 
+                  />
                   <span className="text-line-soft">•</span>
                   <span className="font-body-sm text-body-sm underline cursor-pointer hover:text-terracotta transition-colors">{stay.locationText}</span>
               </div>
@@ -109,10 +112,7 @@ export default async function StayDetailPage({ params }: Props) {
                                         {new Intl.DateTimeFormat("es-CO", { month: "long", year: "numeric" }).format(r.createdAt)}
                                     </p>
                                 </div>
-                                <p className="font-display text-lg">
-                                    <span className="num">{r.rating}</span>
-                                    <span className="ml-0.5 text-xs text-ink-mute">/ 5</span>
-                                </p>
+                                <Stars rating={r.rating} size="xs" />
                             </header>
                             <p className="text-ink-soft">{r.comment}</p>
                         </li>
