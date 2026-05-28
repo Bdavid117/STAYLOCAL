@@ -55,21 +55,50 @@ export async function searchStays(
   // Pre-filtra IDs por geo (Haversine) cuando aplica.
   let geoIds: string[] | null = null;
   if (f.lat !== undefined && f.lng !== undefined && f.radiusKm !== undefined) {
-    const rows = await deps.db.$queryRawUnsafe<{ id: string }[]>(
-      `
-      SELECT id FROM "Stay"
-      WHERE status = 'ACTIVE'
-        AND (6371 * acos(
-              cos(radians($1)) * cos(radians(lat)) *
-              cos(radians(lng) - radians($2)) +
-              sin(radians($1)) * sin(radians(lat))
-            )) <= $3
-      `,
-      f.lat,
-      f.lng,
-      f.radiusKm
-    );
-    geoIds = rows.map((r) => r.id);
+    // Detectamos si es SQLite (no tiene funciones trigonométricas por defecto)
+    const isSqlite = (deps.db as any)._activeProvider === "sqlite";
+
+    if (isSqlite) {
+      // En SQLite filtramos en memoria para desarrollo
+      const allStays = await deps.db.stay.findMany({
+        where: { status: "ACTIVE" },
+        select: { id: true, lat: true, lng: true },
+      });
+
+      const toRad = (v: number) => (v * Math.PI) / 180;
+      geoIds = allStays
+        .filter((s) => {
+          const dLat = toRad(s.lat - f.lat!);
+          const dLng = toRad(s.lng - f.lng!);
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(toRad(f.lat!)) *
+              Math.cos(toRad(s.lat)) *
+              Math.sin(dLng / 2) *
+              Math.sin(dLng / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const distance = 6371 * c;
+          return distance <= f.radiusKm!;
+        })
+        .map((s) => s.id);
+    } else {
+      const rows = await deps.db.$queryRawUnsafe<{ id: string }[]>(
+        `
+        SELECT id FROM "Stay"
+        WHERE status = 'ACTIVE'
+          AND (6371 * acos(
+                cos(radians($1)) * cos(radians(lat)) *
+                cos(radians(lng) - radians($2)) +
+                sin(radians($1)) * sin(radians(lat))
+              )) <= $3
+        `,
+        f.lat,
+        f.lng,
+        f.radiusKm
+      );
+      geoIds = rows.map((r) => r.id);
+    }
+
     if (geoIds.length === 0) return [];
   }
 

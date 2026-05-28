@@ -5,6 +5,7 @@ import { Container, SectionLabel } from "@/components/ui/Container";
 import { Banner } from "@/components/ui/Banner";
 import { SearchResults } from "./search-results";
 import { Button } from "@/components/ui/Button";
+import { LocationFilter } from "./location-filter";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -25,6 +26,9 @@ export default async function SearchPage({ searchParams }: Props) {
     minCapacity: pick(sp.minCapacity),
     checkIn: pick(sp.checkIn),
     checkOut: pick(sp.checkOut),
+    lat: pick(sp.lat),
+    lng: pick(sp.lng),
+    radiusKm: pick(sp.radiusKm),
   };
 
   let results: Awaited<ReturnType<typeof searchStays>> = [];
@@ -106,56 +110,69 @@ function FiltersBar({
     minCapacity?: string;
     checkIn?: string;
     checkOut?: string;
+    lat?: string;
+    lng?: string;
+    radiusKm?: string;
   };
 }) {
   return (
-    <form className="grid grid-cols-1 gap-3 rounded-2xl border border-line bg-paper p-5 shadow-soft sm:grid-cols-12">
-      <FilterInput
-        name="q"
-        label="Lugar o palabra clave"
-        defaultValue={filters.q}
-        placeholder="Bogotá, cabaña, centro…"
-        className="sm:col-span-4"
-      />
-      <FilterInput
-        name="checkIn"
-        type="date"
-        label="Llegada"
-        defaultValue={filters.checkIn}
-        className="sm:col-span-2"
-      />
-      <FilterInput
-        name="checkOut"
-        type="date"
-        label="Salida"
-        defaultValue={filters.checkOut}
-        className="sm:col-span-2"
-      />
-      <FilterInput
-        name="minCapacity"
-        type="number"
-        label="Personas mín."
-        defaultValue={filters.minCapacity}
-        className="sm:col-span-1"
-      />
-      <FilterInput
-        name="minPrice"
-        type="number"
-        label="Precio mín."
-        defaultValue={filters.minPrice}
-        className="sm:col-span-1"
-      />
-      <FilterInput
-        name="maxPrice"
-        type="number"
-        label="Precio máx."
-        defaultValue={filters.maxPrice}
-        className="sm:col-span-1"
-      />
-      <div className="flex items-end sm:col-span-1">
-        <Button type="submit" size="md" className="w-full">
-          Buscar
-        </Button>
+    <form className="space-y-4 rounded-2xl border border-line bg-paper p-5 shadow-soft">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
+        <FilterInput
+          name="q"
+          label="Lugar o palabra clave"
+          defaultValue={filters.q}
+          placeholder="Bogotá, cabaña, centro…"
+          className="sm:col-span-4"
+        />
+        <LocationFilter 
+          initialLat={filters.lat} 
+          initialLng={filters.lng} 
+          initialRadius={filters.radiusKm} 
+        />
+        <div className="flex items-end sm:col-span-4">
+          <Button type="submit" size="md" className="w-full">
+            Aplicar Filtros
+          </Button>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-10">
+        <FilterInput
+          name="checkIn"
+          type="date"
+          label="Llegada"
+          defaultValue={filters.checkIn}
+          className="sm:col-span-2"
+        />
+        <FilterInput
+          name="checkOut"
+          type="date"
+          label="Salida"
+          defaultValue={filters.checkOut}
+          className="sm:col-span-2"
+        />
+        <FilterInput
+          name="minCapacity"
+          type="number"
+          label="Huéspedes"
+          defaultValue={filters.minCapacity}
+          className="sm:col-span-2"
+        />
+        <FilterInput
+          name="minPrice"
+          type="number"
+          label="Precio mín."
+          defaultValue={filters.minPrice}
+          className="sm:col-span-2"
+        />
+        <FilterInput
+          name="maxPrice"
+          type="number"
+          label="Precio máx."
+          defaultValue={filters.maxPrice}
+          className="sm:col-span-2"
+        />
       </div>
     </form>
   );
