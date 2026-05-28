@@ -80,3 +80,9 @@ export interface AvailabilityRepository {
   blockDates(stayId: string, dates: Date[]): Promise<void>;
   unblockDates(stayId: string, dates: Date[]): Promise<void>;
 }
+
+export interface FavoriteRepository {
+  toggle(userId: string, stayId: string): Promise<boolean>; // true if added, false if removed
+  isFavorite(userId: string, stayId: string): Promise<boolean>;
+  listByUser(userId: string): Promise<StayWithCover[]>;
+}

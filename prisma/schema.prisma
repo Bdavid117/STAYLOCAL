@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -67,6 +67,7 @@ model User {
   reviews            Review[]
   notifications      Notification[]
   passwordResetTokens PasswordResetToken[]
+  favorites          Favorite[]
 }
 
 // Tokens de recuperación de contraseña (CU-03). El token crudo se envía por
@@ -91,7 +92,7 @@ model Stay {
   host          User       @relation(fields: [hostId], references: [id])
   title         String
   description   String
-  pricePerNight Decimal @db.Decimal(10, 2) 
+  pricePerNight Decimal  
   capacity      Int
   lat           Float
   lng           Float
@@ -103,9 +104,24 @@ model Stay {
   availability Availability[]
   bookings     Booking[]
   reviews      Review[]
+  favoritedBy  Favorite[]
 
   @@index([hostId])
   @@index([lat, lng])
+}
+
+// ILF-09 Favoritos (Wishlist)
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stayId    String
+  stay      Stay     @relation(fields: [stayId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, stayId])
+  @@index([userId])
+  @@index([stayId])
 }
 
 // ILF-03
@@ -139,9 +155,9 @@ model Booking {
   guest       User          @relation(fields: [guestId], references: [id])
   stayId      String
   stay        Stay          @relation(fields: [stayId], references: [id])
-  checkIn DateTime @db.Date 
-  checkOut DateTime @db.Date 
-  totalAmount Decimal @db.Decimal(10, 2) 
+  checkIn DateTime  
+  checkOut DateTime  
+  totalAmount Decimal  
   status      BookingStatus @default(PENDING)
   createdAt   DateTime      @default(now())
 
@@ -157,7 +173,7 @@ model Payment {
   id          String        @id @default(cuid())
   bookingId   String        @unique
   booking     Booking       @relation(fields: [bookingId], references: [id])
-  amount Decimal @db.Decimal(10, 2) 
+  amount Decimal  
   currency    String        @default("USD")
   provider    String        @default("fake") // 'fake' | 'stripe'
   providerRef String?

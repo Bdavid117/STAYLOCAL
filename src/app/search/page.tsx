@@ -1,4 +1,5 @@
 import { prisma } from "@/shared/db";
+import { auth } from "@/shared/auth";
 import { searchStays } from "@/modules/stays/services/search-stays";
 import { Container, SectionLabel } from "@/components/ui/Container";
 import { Banner } from "@/components/ui/Banner";
@@ -16,6 +17,7 @@ function pick(value: string | string[] | undefined): string | undefined {
 
 export default async function SearchPage({ searchParams }: Props) {
   const sp = await searchParams;
+  const session = await auth();
   const filters = {
     q: pick(sp.q),
     minPrice: pick(sp.minPrice),
@@ -27,8 +29,18 @@ export default async function SearchPage({ searchParams }: Props) {
 
   let results: Awaited<ReturnType<typeof searchStays>> = [];
   let error: string | null = null;
+  let favoriteIds: Set<string> = new Set();
+
   try {
     results = await searchStays(filters, { db: prisma });
+    
+    if (session?.user?.id) {
+      const favs = await prisma.favorite.findMany({
+        where: { userId: session.user.id },
+        select: { stayId: true }
+      });
+      favoriteIds = new Set(favs.map(f => f.stayId));
+    }
   } catch (err) {
     error = err instanceof Error ? err.message : "Filtros inválidos";
   }
@@ -90,7 +102,12 @@ export default async function SearchPage({ searchParams }: Props) {
           <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {results.map((s, i) => (
               <li key={s.id}>
-                <StayCard stay={s} index={i} />
+                <StayCard 
+                  stay={s} 
+                  index={i} 
+                  isFavorite={favoriteIds.has(s.id)}
+                  showFavoriteButton={!!session?.user?.id}
+                />
               </li>
             ))}
           </ul>

@@ -21,6 +21,7 @@ export async function Header() {
             {isAuth && (
               <>
                 <NavLink href="/bookings">Reservas</NavLink>
+                <NavLink href="/favorites">Favoritos</NavLink>
                 <NavLink href="/host/stays">Alojamientos</NavLink>
                 <NavLink href="/profile">Perfil</NavLink>
               </>
@@ -52,6 +53,7 @@ export async function Header() {
                 {isAuth ? (
                   <>
                     <Link href="/profile" className="px-4 py-3 text-sm hover:bg-bone-2 transition-colors">Perfil</Link>
+                    <Link href="/favorites" className="px-4 py-3 text-sm hover:bg-bone-2 transition-colors">Favoritos</Link>
                     <div className="px-4 py-3 text-sm hover:bg-bone-2 transition-colors">
                       <LogoutButton />
                     </div>
